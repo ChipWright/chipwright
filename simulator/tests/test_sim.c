@@ -124,6 +124,44 @@ static void test_twin_skips_failed_reads(void) {
   CHECK(capture.count == 0);
 }
 
+static void test_twin_commission_survives_loss(void) {
+  oh_twin_network_t network;
+  oh_twin_network_init(&network, 50, 777);
+  oh_matter_session_t session;
+  CHECK(oh_twin_commission(&network, "twin", 20, &session) == OH_OK);
+  CHECK(session.steps_completed == session.steps_total);
+}
+
+static void test_twin_networked_lossless_uplink(void) {
+  register_twin_sensor();
+  oh_twin_network_t network;
+  oh_twin_network_init(&network, 0, 1);
+  const oh_device_t device = {.name = "twin"};
+  oh_twin_capture_t capture;
+  oh_twin_capture_reset(&capture);
+
+  CHECK(oh_twin_run_networked(&device, 5, &capture, &network) == OH_OK);
+  CHECK(capture.count == 5);
+  CHECK(network.telemetry_uplinked == 5);
+  CHECK(network.telemetry_dropped == 0);
+}
+
+static void test_twin_networked_lossy_uplink(void) {
+  register_twin_sensor();
+  oh_twin_network_t network;
+  oh_twin_network_init(&network, 100, 1);
+  const oh_device_t device = {.name = "twin"};
+  oh_twin_capture_t capture;
+  oh_twin_capture_reset(&capture);
+
+  CHECK(oh_twin_run_networked(&device, 5, &capture, &network) == OH_OK);
+  // Every emitted sample is captured locally, but none reach the cloud over a dead link.
+  CHECK(capture.count == 5);
+  CHECK(network.telemetry_uplinked == 0);
+  CHECK(network.telemetry_dropped == 5);
+  CHECK(network.telemetry_uplinked + network.telemetry_dropped == capture.count);
+}
+
 int main(void) {
   test_source_advances();
   test_fault_none_passthrough();
@@ -132,6 +170,9 @@ int main(void) {
   test_fault_fail_reports_io();
   test_twin_captures_telemetry();
   test_twin_skips_failed_reads();
+  test_twin_commission_survives_loss();
+  test_twin_networked_lossless_uplink();
+  test_twin_networked_lossy_uplink();
 
   fprintf(stdout, "%d checks, %d failure(s)\n", g_checks, g_failures);
   return g_failures == 0 ? 0 : 1;

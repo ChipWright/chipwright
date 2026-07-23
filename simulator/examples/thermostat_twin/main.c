@@ -52,5 +52,22 @@ int main(void) {
   oh_twin_run(&device, 3, &capture);
   report("sensor failure", &capture);
 
+  // Network fault injection: commission and stream telemetry over a lossy link.
+  const oh_fault_config_t nominal = {.kind = OH_FAULT_NONE, .offset = 0.0f};
+  oh_fault_sensor_set(&sensor, nominal);
+  oh_sim_source_init(&source, 21.0f, 0.5f);
+
+  oh_twin_network_t network;
+  oh_twin_network_init(&network, 40, 2026);
+  oh_matter_session_t session;
+  const oh_status_t commissioned = oh_twin_commission(&network, device.name, 10, &session);
+  printf("network: commissioning over 40%% loss link: %s (retries %u)\n",
+         commissioned == OH_OK ? "survived" : "failed", session.retries_used);
+
+  oh_twin_capture_reset(&capture);
+  oh_twin_run_networked(&device, 5, &capture, &network);
+  printf("network: telemetry over lossy link: %u captured, %u uplinked, %u dropped\n",
+         capture.count, network.telemetry_uplinked, network.telemetry_dropped);
+
   return 0;
 }

@@ -11,6 +11,8 @@ hardware.
 - Sensor fault injection: none, stuck (frozen reading), fail (I/O error), and offset
   (calibration drift), changeable mid-run
 - Telemetry capture through the twin runtime for observation and assertion
+- Network fault injection: commissioning and telemetry uplink run over the protocol
+  layer's lossy transport, so the twin can survive injected packet loss end to end
 
 ## Layout
 
@@ -31,6 +33,6 @@ make -C simulator example
 
 ## Not yet implemented
 
-Network fault injection (packet loss, outages) and protocol behavior depend on the
-protocol layer (branch 4), which is the next Phase 2 branch. Battery-drain modelling and
-a virtual network fabric follow from there.
+Battery-drain modelling and a richer virtual network fabric (multi-device topology,
+latency, outages beyond uniform packet loss). Real protocol behavior arrives when the
+protocol layer is backed by connectedhomeip.

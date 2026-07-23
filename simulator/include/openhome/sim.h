@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include "openhome/hal.h"
+#include "openhome/protocol.h"
 #include "openhome/sdk.h"
 
 // Digital-twin simulator. It runs the same SDK and HAL as physical firmware, driving a
@@ -62,5 +63,27 @@ void oh_twin_capture_reset(oh_twin_capture_t *capture);
 // Runs the device for `ticks` sampling cycles, capturing every telemetry sample. The
 // previous telemetry sink is restored before returning.
 oh_status_t oh_twin_run(const oh_device_t *device, unsigned ticks, oh_twin_capture_t *capture);
+
+// Network conditions for the twin. Wraps the protocol layer's simulated transport so
+// packet loss can be injected into commissioning and telemetry uplink, alongside the
+// sensor fault model.
+typedef struct {
+  oh_sim_transport_t transport;
+  unsigned telemetry_uplinked;
+  unsigned telemetry_dropped;
+} oh_twin_network_t;
+
+void oh_twin_network_init(oh_twin_network_t *network, unsigned loss_percent, unsigned seed);
+
+// Commissions the device over the twin's lossy network. Returns OH_OK when it survives
+// the packet loss within the per-step retry budget.
+oh_status_t oh_twin_commission(oh_twin_network_t *network, const char *device_name,
+                               unsigned max_retries_per_step, oh_matter_session_t *out_session);
+
+// Runs the device for `ticks`, capturing telemetry locally and attempting to uplink each
+// sample over the lossy network. Dropped uplinks are counted in the network stats. The
+// previous telemetry sink is restored before returning.
+oh_status_t oh_twin_run_networked(const oh_device_t *device, unsigned ticks,
+                                  oh_twin_capture_t *capture, oh_twin_network_t *network);
 
 #endif  // OPENHOME_SIM_H
