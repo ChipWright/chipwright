@@ -8,19 +8,24 @@ import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import {
+  DESIGNER_PROTOCOLS,
+  formToManifest,
   generate,
+  manifestToForm,
   spawnTwin,
   TWIN_SOURCE_DIR,
   twinBinaryPath,
   validate,
 } from "@openhome/studio-core";
-import type { TwinFault, TwinHandle } from "@openhome/studio-core";
+import type { DeviceForm, TwinFault, TwinHandle } from "@openhome/studio-core";
 
 type Tab = "designer" | "twin";
 
 type InboundMessage =
   | { type: "ready" | "refresh" | "stopTwin" }
-  | { type: "startTwin"; fault: TwinFault; faultAt: number; offset: number };
+  | { type: "startTwin"; fault: TwinFault; faultAt: number; offset: number }
+  | { type: "applyForm"; form: DeviceForm }
+  | { type: "saveForm"; form: DeviceForm };
 
 // A fallback manifest so the panel is useful even before a device.yaml is open. It mirrors
 // the reference thermostat and is only used when no manifest is selected or active.
@@ -55,7 +60,13 @@ export class StudioPanel {
         switch (message.type) {
           case "ready":
           case "refresh":
-            void this.sendState();
+            void this.sendInit();
+            break;
+          case "applyForm":
+            this.applyForm(message.form);
+            break;
+          case "saveForm":
+            void this.saveForm(message.form);
             break;
           case "startTwin":
             void this.startTwin(message.fault, message.faultAt, message.offset);
@@ -93,7 +104,7 @@ export class StudioPanel {
       StudioPanel.current.activeUri = uri;
     }
     StudioPanel.current.post({ type: "focus", tab });
-    void StudioPanel.current.sendState();
+    void StudioPanel.current.sendInit();
   }
 
   private async manifestText(): Promise<{ yaml: string; source: string }> {
@@ -111,18 +122,64 @@ export class StudioPanel {
     return { yaml: EXAMPLE_MANIFEST, source: "built-in example" };
   }
 
-  private async sendState(): Promise<void> {
+  // Sends the full designer state: the editable form, the protocol catalog, and the result
+  // of compiling the current manifest. Used on load and refresh.
+  private async sendInit(): Promise<void> {
     const { yaml, source } = await this.manifestText();
+    this.post({
+      type: "init",
+      source,
+      form: manifestToForm(yaml),
+      protocols: DESIGNER_PROTOCOLS,
+      ...this.compile(yaml),
+    });
+  }
+
+  // Recompiles from an edited form without touching the form the webview already holds, so
+  // typing in the designer stays responsive. The manifest is not written to disk here.
+  private applyForm(form: DeviceForm): void {
+    this.post({ type: "update", ...this.compile(formToManifest(form)) });
+  }
+
+  private async saveForm(form: DeviceForm): Promise<void> {
+    const target = this.saveTarget();
+    if (target === null) {
+      this.post({ type: "saveError", message: "Select a device manifest to save to." });
+      return;
+    }
+    const yaml = formToManifest(form);
+    await vscode.workspace.fs.writeFile(target, new TextEncoder().encode(yaml));
+    this.activeUri = target;
+    this.post({ type: "saved", source: vscode.workspace.asRelativePath(target) });
+  }
+
+  private compile(yaml: string): {
+    valid: boolean;
+    deviceName: string | null;
+    diagnostics: unknown;
+    files: string[];
+    yaml: string;
+  } {
     const validation = validate(yaml);
     const generation = generate(yaml);
-    this.post({
-      type: "state",
-      source,
+    return {
       valid: validation.valid,
       deviceName: validation.deviceName,
       diagnostics: validation.diagnostics,
       files: generation.files.map((file) => file.path),
-    });
+      yaml,
+    };
+  }
+
+  private saveTarget(): vscode.Uri | null {
+    if (this.activeUri !== undefined) {
+      return this.activeUri;
+    }
+    const editor = vscode.window.activeTextEditor;
+    if (editor !== undefined && /\.ya?ml$/.test(editor.document.fileName)) {
+      return editor.document.uri;
+    }
+    return null;
   }
 
   private async startTwin(fault: TwinFault, faultAt: number, offset: number): Promise<void> {

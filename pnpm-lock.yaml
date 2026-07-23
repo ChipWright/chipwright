@@ -60,6 +60,9 @@ importers:
       '@openhome/device-engine':
         specifier: workspace:*
         version: link:../device-engine
+      yaml:
+        specifier: ^2.4.5
+        version: 2.9.0
     devDependencies:
       '@types/node':
         specifier: ^22.5.0

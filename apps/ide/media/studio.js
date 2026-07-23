@@ -1,8 +1,8 @@
 // Webview UI script. It runs sandboxed in the panel with no Node or VS Code access, and
-// talks to the extension host only through postMessage. The designer view renders the
-// manifest state the host validates and generates; the twin view sends run controls to the
-// host and plots the telemetry samples the host streams back from the twin binary. All real
-// work happens in the host via the studio core; this script only draws and forwards intent.
+// talks to the extension host only through postMessage. The designer edits the device as a
+// form and asks the host to recompile the manifest on every change; the twin view sends run
+// controls and plots the telemetry the host streams from the twin binary. All real work
+// (compiling, saving, running the twin) happens in the host via the studio core.
 
 (function () {
   const vscode = acquireVsCodeApi();
@@ -37,19 +37,257 @@
       .replace(/>/g, "&gt;");
   }
 
-  // Designer view: rendered fresh from each state the host sends.
+  function el(tag, attrs, children) {
+    const node = document.createElement(tag);
+    for (const key of Object.keys(attrs || {})) {
+      if (key === "class") {
+        node.className = attrs[key];
+      } else if (key === "text") {
+        node.textContent = attrs[key];
+      } else {
+        node.setAttribute(key, attrs[key]);
+      }
+    }
+    for (const child of children || []) {
+      node.appendChild(child);
+    }
+    return node;
+  }
 
-  function renderDesigner(state) {
-    const badge = state.valid
-      ? '<span class="badge ok">valid</span>'
-      : '<span class="badge error">invalid</span>';
-    const name = state.deviceName ? escapeHtml(state.deviceName) : "unknown device";
+  // --- Designer -------------------------------------------------------------------------
 
-    const diagnostics =
-      state.diagnostics.length === 0
+  const designer = { form: null, protocols: [] };
+  let applyTimer = null;
+
+  function scheduleApply() {
+    if (applyTimer !== null) {
+      clearTimeout(applyTimer);
+    }
+    applyTimer = setTimeout(() => {
+      vscode.postMessage({ type: "applyForm", form: designer.form });
+    }, 200);
+  }
+
+  function field(labelText, input) {
+    return el("label", { class: "field" }, [el("span", { text: labelText }), input]);
+  }
+
+  function textInput(value, onChange) {
+    const input = el("input", { type: "text", value: value || "" });
+    input.addEventListener("input", () => onChange(input.value));
+    return input;
+  }
+
+  function numberInput(value, onChange) {
+    const input = el("input", { type: "number", value: value === null ? "" : String(value) });
+    input.addEventListener("input", () => {
+      onChange(input.value === "" ? null : Number(input.value));
+    });
+    return input;
+  }
+
+  function renderCapabilities(container) {
+    container.textContent = "";
+    designer.form.capabilities.forEach((cap, index) => {
+      const kindSelect = el("select", {}, [
+        el("option", { value: "sensor", text: "sensor" }),
+        el("option", { value: "actuator", text: "actuator" }),
+      ]);
+      kindSelect.value = cap.kind;
+      kindSelect.addEventListener("change", () => {
+        designer.form.capabilities[index] =
+          kindSelect.value === "sensor"
+            ? { key: cap.key, kind: "sensor", unit: "", min: null, max: null }
+            : { key: cap.key, kind: "actuator", modes: [] };
+        renderCapabilities(container);
+        scheduleApply();
+      });
+
+      const detail =
+        cap.kind === "sensor"
+          ? [
+              field("Unit", textInput(cap.unit, (v) => {
+                cap.unit = v;
+                scheduleApply();
+              })),
+              field("Min", numberInput(cap.min, (v) => {
+                cap.min = v;
+                scheduleApply();
+              })),
+              field("Max", numberInput(cap.max, (v) => {
+                cap.max = v;
+                scheduleApply();
+              })),
+            ]
+          : [
+              field(
+                "Modes (comma separated)",
+                textInput(cap.modes.join(", "), (v) => {
+                  cap.modes = v
+                    .split(",")
+                    .map((m) => m.trim())
+                    .filter((m) => m.length > 0);
+                  scheduleApply();
+                }),
+              ),
+            ];
+
+      const remove = el("button", { class: "ghost", text: "Remove" }, []);
+      remove.addEventListener("click", () => {
+        designer.form.capabilities.splice(index, 1);
+        renderCapabilities(container);
+        scheduleApply();
+      });
+
+      const row = el("div", { class: "cap-row" }, [
+        field("Key", textInput(cap.key, (v) => {
+          cap.key = v;
+          scheduleApply();
+        })),
+        field("Type", kindSelect),
+        ...detail,
+        remove,
+      ]);
+      container.appendChild(row);
+    });
+  }
+
+  function renderDesigner() {
+    const form = designer.form;
+    const view = views.designer;
+    view.textContent = "";
+
+    // Device section.
+    const devicePanel = el("div", { class: "panel" }, [
+      el("h2", { text: "Device" }),
+      el("div", { class: "grid" }, [
+        field("Name", textInput(form.name, (v) => {
+          form.name = v;
+          scheduleApply();
+        })),
+        field("Category", textInput(form.category, (v) => {
+          form.category = v;
+          scheduleApply();
+        })),
+        field("Manufacturer", textInput(form.manufacturer, (v) => {
+          form.manufacturer = v;
+          scheduleApply();
+        })),
+      ]),
+    ]);
+
+    // Capabilities section.
+    const capContainer = el("div", { class: "caps" }, []);
+    renderCapabilities(capContainer);
+    const addSensor = el("button", { class: "ghost", text: "Add sensor" }, []);
+    addSensor.addEventListener("click", () => {
+      form.capabilities.push({ key: "", kind: "sensor", unit: "", min: null, max: null });
+      renderCapabilities(capContainer);
+      scheduleApply();
+    });
+    const addActuator = el("button", { class: "ghost", text: "Add actuator" }, []);
+    addActuator.addEventListener("click", () => {
+      form.capabilities.push({ key: "", kind: "actuator", modes: [] });
+      renderCapabilities(capContainer);
+      scheduleApply();
+    });
+    const capPanel = el("div", { class: "panel" }, [
+      el("h2", { text: "Capabilities" }),
+      capContainer,
+      el("div", { class: "controls" }, [addSensor, addActuator]),
+    ]);
+
+    // Connectivity section.
+    const protoBoxes = designer.protocols.map((proto) => {
+      const box = el("input", { type: "checkbox" });
+      box.checked = form.protocols.includes(proto);
+      box.addEventListener("change", () => {
+        if (box.checked) {
+          if (!form.protocols.includes(proto)) {
+            form.protocols.push(proto);
+          }
+        } else {
+          form.protocols = form.protocols.filter((p) => p !== proto);
+        }
+        scheduleApply();
+      });
+      return el("label", { class: "check" }, [box, el("span", { text: proto })]);
+    });
+    const connPanel = el("div", { class: "panel" }, [
+      el("h2", { text: "Connectivity" }),
+      el("div", { class: "checks" }, protoBoxes),
+    ]);
+
+    // Power and security section.
+    const batteryBox = el("input", { type: "checkbox" });
+    batteryBox.checked = form.battery.enabled;
+    const rechargeBox = el("input", { type: "checkbox" });
+    rechargeBox.checked = form.battery.rechargeable;
+    rechargeBox.disabled = !form.battery.enabled;
+    batteryBox.addEventListener("change", () => {
+      form.battery.enabled = batteryBox.checked;
+      rechargeBox.disabled = !batteryBox.checked;
+      scheduleApply();
+    });
+    rechargeBox.addEventListener("change", () => {
+      form.battery.rechargeable = rechargeBox.checked;
+      scheduleApply();
+    });
+    const encryptionBox = el("input", { type: "checkbox" });
+    encryptionBox.checked = form.encryption;
+    encryptionBox.addEventListener("change", () => {
+      form.encryption = encryptionBox.checked;
+      scheduleApply();
+    });
+    const powerPanel = el("div", { class: "panel" }, [
+      el("h2", { text: "Power and security" }),
+      el("div", { class: "checks" }, [
+        el("label", { class: "check" }, [batteryBox, el("span", { text: "Battery powered" })]),
+        el("label", { class: "check" }, [rechargeBox, el("span", { text: "Rechargeable" })]),
+        el("label", { class: "check" }, [encryptionBox, el("span", { text: "Encryption" })]),
+      ]),
+    ]);
+
+    // Results section, updated in place on every recompile.
+    const save = el("button", { class: "refresh", text: "Save to manifest" }, []);
+    save.addEventListener("click", () => {
+      vscode.postMessage({ type: "saveForm", form: designer.form });
+    });
+    const resultsPanel = el("div", { class: "panel" }, [
+      el("div", { class: "panel-head" }, [
+        el("h2", { text: "Compiled" }),
+        el("span", { class: "badge", id: "d-badge", text: "..." }),
+        save,
+      ]),
+      el("p", { class: "muted", id: "d-status" }, []),
+      el("div", { id: "d-diagnostics" }, []),
+      el("h3", { text: "Generated artifacts" }),
+      el("ul", { class: "files", id: "d-files" }, []),
+      el("h3", { text: "Manifest preview" }),
+      el("pre", { class: "code" }, [el("code", { id: "d-yaml" }, [])]),
+    ]);
+
+    view.appendChild(devicePanel);
+    view.appendChild(capPanel);
+    view.appendChild(connPanel);
+    view.appendChild(powerPanel);
+    view.appendChild(resultsPanel);
+  }
+
+  function renderResults(data) {
+    const badge = document.getElementById("d-badge");
+    if (badge === null) {
+      return;
+    }
+    badge.textContent = data.valid ? "valid" : "invalid";
+    badge.className = `badge ${data.valid ? "ok" : "error"}`;
+
+    const diagnostics = document.getElementById("d-diagnostics");
+    diagnostics.innerHTML =
+      data.diagnostics.length === 0
         ? '<p class="muted">No diagnostics.</p>'
         : '<ul class="diagnostics">' +
-          state.diagnostics
+          data.diagnostics
             .map((d) => {
               const where = d.path ? escapeHtml(d.path) : "manifest";
               return `<li class="diag ${escapeHtml(d.severity)}"><code>${where}</code> ${escapeHtml(d.message)}</li>`;
@@ -57,32 +295,23 @@
             .join("") +
           "</ul>";
 
-    const files =
-      state.files.length === 0
-        ? '<p class="muted">No artifacts generated.</p>'
-        : '<ul class="files">' +
-          state.files.map((f) => `<li><code>${escapeHtml(f)}</code></li>`).join("") +
-          "</ul>";
+    const files = document.getElementById("d-files");
+    files.innerHTML =
+      data.files.length === 0
+        ? '<li class="muted">No artifacts.</li>'
+        : data.files.map((f) => `<li><code>${escapeHtml(f)}</code></li>`).join("");
 
-    views.designer.innerHTML = `
-      <div class="panel">
-        <div class="panel-head">
-          <h1>${name}</h1>
-          ${badge}
-        </div>
-        <p class="muted">Source: <code>${escapeHtml(state.source)}</code></p>
-      </div>
-      <div class="panel">
-        <h2>Diagnostics</h2>
-        ${diagnostics}
-      </div>
-      <div class="panel">
-        <h2>Generated artifacts <span class="count">${state.files.length}</span></h2>
-        ${files}
-      </div>`;
+    document.getElementById("d-yaml").textContent = data.yaml;
   }
 
-  // Twin view: built once so the canvas and control state persist across samples.
+  function setStatus(text) {
+    const status = document.getElementById("d-status");
+    if (status !== null) {
+      status.textContent = text;
+    }
+  }
+
+  // --- Twin -----------------------------------------------------------------------------
 
   const twin = { samples: [], faultAt: -1, running: false };
 
@@ -119,15 +348,15 @@
   const faultSelect = document.getElementById("twin-fault");
   const faultAtInput = document.getElementById("twin-fault-at");
   const offsetInput = document.getElementById("twin-offset");
-  const badge = document.getElementById("twin-badge");
-  const status = document.getElementById("twin-status");
+  const twinBadge = document.getElementById("twin-badge");
+  const twinStatus = document.getElementById("twin-status");
   const reading = document.getElementById("twin-reading");
   const canvas = document.getElementById("twin-chart");
 
   function setRunning(running) {
     twin.running = running;
-    badge.textContent = running ? "running" : "idle";
-    badge.classList.toggle("ok", running);
+    twinBadge.textContent = running ? "running" : "idle";
+    twinBadge.classList.toggle("ok", running);
     document.getElementById("twin-start").disabled = running;
     document.getElementById("twin-stop").disabled = !running;
   }
@@ -188,7 +417,6 @@
     const x = (i) => pad + (values.length === 1 ? 0 : (i / (values.length - 1)) * plotW);
     const y = (v) => pad / 2 + plotH - ((v - min) / (max - min)) * plotH;
 
-    // Fault marker.
     if (twin.faultAt >= 0 && twin.faultAt < values.length) {
       ctx.strokeStyle = cssVar("--vscode-errorForeground", "#f14c4c");
       ctx.setLineDash([4, 3]);
@@ -222,21 +450,36 @@
   setRunning(false);
   drawChart();
 
+  // --- Messages -------------------------------------------------------------------------
+
   window.addEventListener("message", (event) => {
     const message = event.data;
     switch (message.type) {
-      case "state":
-        renderDesigner(message);
+      case "init":
+        designer.form = message.form;
+        designer.protocols = message.protocols;
+        renderDesigner();
+        renderResults(message);
+        setStatus(`Source: ${message.source}`);
+        break;
+      case "update":
+        renderResults(message);
+        break;
+      case "saved":
+        setStatus(`Saved to ${message.source}`);
+        break;
+      case "saveError":
+        setStatus(message.message);
         break;
       case "focus":
         showTab(message.tab);
         break;
       case "twinStarted":
         setRunning(true);
-        status.textContent = "Streaming telemetry from the twin.";
+        twinStatus.textContent = "Streaming telemetry from the twin.";
         break;
       case "twinStatus":
-        status.textContent = message.message;
+        twinStatus.textContent = message.message;
         break;
       case "sample":
         twin.samples.push(message.value);
@@ -245,11 +488,11 @@
         break;
       case "twinExit":
         setRunning(false);
-        status.textContent = "Twin run complete.";
+        twinStatus.textContent = "Twin run complete.";
         break;
       case "twinError":
         setRunning(false);
-        status.textContent = message.message;
+        twinStatus.textContent = message.message;
         break;
     }
   });

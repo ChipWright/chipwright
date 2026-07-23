@@ -11,6 +11,14 @@ export {
   type GenerationResult,
 } from "./manifest.js";
 export {
+  manifestToForm,
+  formToManifest,
+  emptyForm,
+  DESIGNER_PROTOCOLS,
+  type DeviceForm,
+  type FormCapability,
+} from "./designer.js";
+export {
   parseSampleLine,
   readTelemetry,
   type TwinSample,
