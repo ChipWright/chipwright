@@ -12,4 +12,6 @@ export {
   defaultGenerators,
   firmwareInterfaceGenerator,
   documentationGenerator,
+  cloudApiGenerator,
+  testStubGenerator,
 } from "./generators/index.js";

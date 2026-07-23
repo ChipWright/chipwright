@@ -24,6 +24,8 @@ hardware later, so the same assertions gate both.
 - `suites/thermostat/` — functional acceptance suite (runs against every target)
 - `suites/connectivity/` — commissioning under packet loss
 - `suites/reliability/` — soak loop over many lossy commissioning cycles
+- `suites/generated/` — runs the manifest-generated acceptance suite (from the
+  device-engine test-stub generator) against the twin, closing the DDL-to-tests loop
 
 ## Running
 

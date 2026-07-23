@@ -30,5 +30,18 @@ pnpm --filter @openhome/device-engine openhome -- validate ../../examples/thermo
 - `src/schema.ts` — manifest types and the normalized intermediate representation (IR)
 - `src/validate.ts` — manifest validation with structured diagnostics
 - `src/parse.ts` — load a manifest file into a validated IR
-- `src/generators/` — generator backends (firmware interface, documentation)
+- `src/generators/` — generator backends (firmware interface, documentation, cloud API,
+  test stub)
 - `src/cli.ts` — command-line entry point
+
+## Generators
+
+Compiling a manifest runs every generator backend:
+
+- **firmware-interface** — a C header of capability prototypes, range constants, and mode
+  enums
+- **documentation** — a Markdown capability reference
+- **cloud-api** — an OpenAPI spec whose telemetry metrics, shadow schema, and command
+  modes are bound to the manifest, keeping the cloud contract from drifting
+- **test-stub** — a target-agnostic acceptance suite asserting each capability is reachable
+  and within its declared range

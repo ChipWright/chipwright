@@ -7,9 +7,9 @@ dist/
 build/
 *.tsbuildinfo
 
-# Generated device artifacts
+# Generated device artifacts (compiler output directories)
 out/
-generated/
+build/gen/
 
 # Logs
 *.log
