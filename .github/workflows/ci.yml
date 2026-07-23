@@ -48,3 +48,9 @@ jobs:
 
       - name: Run the digital-twin demonstration
         run: make -C simulator example
+
+      - name: Run protocol layer unit tests
+        run: make -C protocols test
+
+      - name: Run the Matter commissioning demonstration
+        run: make -C protocols example

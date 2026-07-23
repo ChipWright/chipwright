@@ -23,7 +23,7 @@ APIs, tests, documentation, and certification checklists are generated.
 | `core/device-engine`  | DDL compiler and Hardware Abstraction Layer         | In progress |
 | `sdk/firmware`        | Device SDK and HAL (lifecycle, telemetry, drivers)  | In progress |
 | `simulator`           | Digital-twin engine and fault injection             | In progress |
-| `protocols`           | Matter, Thread, BLE, WiFi, and legacy adapters      | Planned     |
+| `protocols`           | Matter, Thread, BLE, WiFi, and legacy adapters      | In progress |
 | `cloud`               | Device registry, telemetry, command dispatch, OTA   | Planned     |
 | `apps/ide`            | Developer IDE (visual designer, twin debugger)      | Planned     |
 | `tests`              | Test framework and hardware-in-the-loop harness     | Planned     |
