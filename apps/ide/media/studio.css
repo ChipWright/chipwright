@@ -138,6 +138,9 @@ input::placeholder { color: var(--fg-muted); opacity: 0.7; }
 
 .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-top: 1px solid var(--border-soft); }
 .toggle-row:first-of-type { border-top: 0; }
+.toggle-row.nested { border-top: 0; padding: 4px 0 9px var(--s4); position: relative; }
+.toggle-row.nested::before { content: ""; position: absolute; left: 4px; top: 0; bottom: 14px; width: 1px; background: var(--border); }
+.toggle-row.nested .label span { font-size: 12.5px; }
 .toggle-row .label { display: grid; gap: 1px; }
 .toggle-row .label span { font-size: 13px; color: var(--fg); }
 .toggle-row .label small { font-size: 11.5px; color: var(--fg-muted); }

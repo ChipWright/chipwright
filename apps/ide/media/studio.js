@@ -78,14 +78,16 @@
       + '<div class="group"><div class="group-head"><h3>Connectivity</h3></div><div class="chips">' + chips + '</div></div>'
       + '<div class="group"><div class="group-head"><h3>Power &amp; Security</h3></div>'
       + toggleRow("battery", "Battery powered", "This device runs on battery", f.battery.enabled, false)
-      + toggleRow("recharge", "Rechargeable", "Battery can be recharged", f.battery.rechargeable, !f.battery.enabled)
+      + (f.battery.enabled ? toggleRow("recharge", "Rechargeable", "The battery can be recharged", f.battery.rechargeable, true) : "")
       + toggleRow("encryption", "Encryption", "Encrypt device communications", f.encryption, false)
       + '</div>';
   }
 
-  function toggleRow(key, title, sub, on, disabled) {
-    return '<div class="toggle-row"><div class="label"><span>' + title + '</span><small>' + sub + '</small></div>'
-      + '<label class="switch"><input type="checkbox" data-toggle="' + key + '"' + (on ? " checked" : "") + (disabled ? " disabled" : "") + '><span class="track"></span></label></div>';
+  // Rechargeable is a property of a battery, so it renders as a nested row and only appears
+  // while Battery powered is on.
+  function toggleRow(key, title, sub, on, nested) {
+    return '<div class="toggle-row' + (nested ? " nested" : "") + '"><div class="label"><span>' + title + '</span><small>' + sub + '</small></div>'
+      + '<label class="switch"><input type="checkbox" data-toggle="' + key + '"' + (on ? " checked" : "") + '><span class="track"></span></label></div>';
   }
 
   inspector.addEventListener("input", (e) => {
