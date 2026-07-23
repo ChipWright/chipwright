@@ -24,7 +24,7 @@ APIs, tests, documentation, and certification checklists are generated.
 | `sdk/firmware`        | Device SDK and HAL (lifecycle, telemetry, drivers)  | In progress |
 | `simulator`           | Digital-twin engine and fault injection             | In progress |
 | `protocols`           | Matter, Thread, BLE, WiFi, and legacy adapters      | In progress |
-| `cloud`               | Device registry, telemetry, command dispatch, OTA   | Planned     |
+| `cloud`               | Device registry, telemetry, command dispatch, OTA   | In progress |
 | `apps/ide`            | Developer IDE (visual designer, twin debugger)      | Planned     |
 | `tests`              | Test framework and hardware-in-the-loop harness     | In progress |
 | `docs`                | Documentation generator, roadmap, and RFCs          | Ongoing     |
