@@ -2,10 +2,14 @@ import assert from "node:assert/strict";
 import { once } from "node:events";
 import { test } from "node:test";
 import { createCloudServer } from "../src/http.js";
+import { verifyCertificate } from "../src/identity.js";
 import { CloudService } from "../src/service.js";
+import { FirmwareSigner } from "../src/signing.js";
 
-async function withServer(run: (base: string) => Promise<void>): Promise<void> {
-  const service = new CloudService(() => 1000);
+async function withServer(
+  run: (base: string) => Promise<void>,
+  service: CloudService = new CloudService(() => 1000),
+): Promise<void> {
   const server = createCloudServer(service);
   server.listen(0);
   await once(server, "listening");
@@ -76,4 +80,74 @@ test("rejects a malformed device registration", async () => {
     const response = await postJson(`${base}/devices`, { deviceType: "thermostat" });
     assert.equal(response.status, 400);
   });
+});
+
+test("provisioning issues a CA-verifiable identity over HTTP", async () => {
+  await withServer(async (base) => {
+    const ca = await (await fetch(`${base}/ca`)).json();
+    assert.match(ca.caPublicKeyPem, /BEGIN PUBLIC KEY/);
+
+    const response = await postJson(`${base}/provision`, { deviceId: "p1", deviceType: "thermostat" });
+    assert.equal(response.status, 201);
+    const result = await response.json();
+    assert.equal(result.device.deviceId, "p1");
+    assert.match(result.identity.privateKeyPem, /BEGIN PRIVATE KEY/);
+    assert.equal(verifyCertificate(result.identity.certificate, ca.caPublicKeyPem), true);
+  });
+});
+
+test("firmware publish rejects tampered artifacts and serves verified builds", async () => {
+  const signer = new FirmwareSigner();
+  const service = new CloudService(() => 1000, signer.publicKeyPem);
+  const artifact = new TextEncoder().encode("thermostat firmware 1.1.0");
+  const build = signer.sign("thermostat", "1.1.0", artifact);
+
+  await withServer(async (base) => {
+    const tampered = await postJson(`${base}/firmware`, {
+      build,
+      artifactBase64: Buffer.from("not the firmware").toString("base64"),
+    });
+    assert.equal(tampered.status, 400);
+
+    const published = await postJson(`${base}/firmware`, {
+      build,
+      artifactBase64: Buffer.from(artifact).toString("base64"),
+    });
+    assert.equal(published.status, 201);
+
+    const fetched = await (await fetch(`${base}/firmware/thermostat/1.1.0`)).json();
+    assert.equal(fetched.version, "1.1.0");
+  }, service);
+});
+
+test("a rollout campaign runs and rolls back over HTTP", async () => {
+  const service = new CloudService(() => 1000);
+  for (const deviceId of ["r1", "r2"]) {
+    service.registerDevice({ deviceId, deviceType: "thermostat", firmwareVersion: "1.0.0" });
+  }
+
+  await withServer(async (base) => {
+    const created = await (
+      await postJson(`${base}/rollouts`, {
+        deviceIds: ["r1", "r2"],
+        targetVersion: "1.1.0",
+        batchSize: 1,
+        maxFailures: 0,
+      })
+    ).json();
+    const id = created.id;
+
+    const firstBatch = await (await postJson(`${base}/rollouts/${id}/next-batch`, {})).json();
+    assert.deepEqual(firstBatch.batch, ["r1"]);
+    await postJson(`${base}/rollouts/${id}/report`, { deviceId: "r1", outcome: "applied" });
+    assert.equal(service.registry.get("r1")?.firmwareVersion, "1.1.0");
+
+    await postJson(`${base}/rollouts/${id}/next-batch`, {});
+    const halted = await (
+      await postJson(`${base}/rollouts/${id}/report`, { deviceId: "r2", outcome: "failed" })
+    ).json();
+    assert.equal(halted.phase, "halted");
+    assert.equal(halted.devices.r1, "rolledback");
+    assert.equal(service.registry.get("r1")?.firmwareVersion, "1.0.0");
+  }, service);
 });

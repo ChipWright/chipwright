@@ -24,14 +24,25 @@ keys, signatures, and SHA-256 come from `node:crypto`).
 ## HTTP API
 
 ```
-POST /devices                  register a device
-GET  /devices                  list devices
-GET  /devices/:id              fetch a device record
-POST /devices/:id/telemetry    ingest telemetry samples
-GET  /devices/:id/shadow       fetch the device shadow
-POST /devices/:id/commands     queue a command
-GET  /devices/:id/commands     drain queued commands
+GET  /ca                            fetch the CA public key
+POST /provision                     register a device and issue it a signed identity
+POST /devices                       register a device
+GET  /devices                       list devices
+GET  /devices/:id                   fetch a device record
+POST /devices/:id/telemetry         ingest telemetry samples
+GET  /devices/:id/shadow            fetch the device shadow
+POST /devices/:id/commands          queue a command
+GET  /devices/:id/commands          drain queued commands
+POST /firmware                      publish a signed build (verified before it is stored)
+GET  /firmware/:deviceType/:version fetch a build manifest
+POST /rollouts                      create a staged rollout campaign
+GET  /rollouts/:id                  fetch rollout status
+POST /rollouts/:id/next-batch       offer the next batch the update
+POST /rollouts/:id/report           report a device outcome (applied or failed)
 ```
+
+Firmware endpoints require a signing trust anchor, passed as the second argument to
+`CloudService`. Without one, publishing reports that the trust anchor is not configured.
 
 ## Running
 
@@ -42,8 +53,6 @@ PORT=8080 pnpm --filter @openhome/cloud serve
 
 ## Not yet implemented
 
-- HTTP endpoints for identity, firmware publishing, and OTA campaigns (currently a
-  library API with tests)
 - Secure boot enforcement on the device side (needs hardware)
 - Durable storage; state is currently in memory
 - Authentication of the HTTP callers themselves

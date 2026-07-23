@@ -10,9 +10,11 @@
 //   GET  /devices/:id/commands        drain queued commands
 
 import { createServer, type IncomingMessage, type Server } from "node:http";
+import type { RolloutOptions } from "./ota.js";
 import type { RegisterDeviceInput } from "./registry.js";
 import type { CloudService } from "./service.js";
 import type { TelemetrySample } from "./shadow.js";
+import type { SignedBuild } from "./signing.js";
 
 interface JsonResponse {
   status: number;
@@ -129,10 +131,135 @@ async function routeDevice(
   return { status: 404, body: { error: "unknown route" } };
 }
 
+async function routeProvision(service: CloudService, req: IncomingMessage): Promise<JsonResponse> {
+  const body = await readJson(req);
+  if (!isRecord(body) || typeof body["deviceId"] !== "string" || typeof body["deviceType"] !== "string") {
+    return { status: 400, body: { error: "deviceId and deviceType are required" } };
+  }
+  const input: RegisterDeviceInput = { deviceId: body["deviceId"], deviceType: body["deviceType"] };
+  if (typeof body["firmwareVersion"] === "string") {
+    input.firmwareVersion = body["firmwareVersion"];
+  }
+  try {
+    return { status: 201, body: service.provisionDevice(input) };
+  } catch (error) {
+    return { status: 409, body: { error: (error as Error).message } };
+  }
+}
+
+async function routeFirmware(
+  service: CloudService,
+  req: IncomingMessage,
+  parts: string[],
+): Promise<JsonResponse> {
+  if (parts.length === 1 && req.method === "POST") {
+    const body = await readJson(req);
+    const rawBuild = isRecord(body) ? body["build"] : undefined;
+    if (!isRecord(body) || !isRecord(rawBuild) || typeof body["artifactBase64"] !== "string") {
+      return { status: 400, body: { error: "build and artifactBase64 are required" } };
+    }
+    if (
+      typeof rawBuild["deviceType"] !== "string" ||
+      typeof rawBuild["version"] !== "string" ||
+      typeof rawBuild["artifactSha256"] !== "string" ||
+      typeof rawBuild["signature"] !== "string"
+    ) {
+      return { status: 400, body: { error: "malformed build manifest" } };
+    }
+    const build: SignedBuild = {
+      deviceType: rawBuild["deviceType"],
+      version: rawBuild["version"],
+      artifactSha256: rawBuild["artifactSha256"],
+      signature: rawBuild["signature"],
+    };
+    try {
+      service.publishFirmware(build, Buffer.from(body["artifactBase64"], "base64"));
+      return { status: 201, body: { published: `${build.deviceType}@${build.version}` } };
+    } catch (error) {
+      return { status: 400, body: { error: (error as Error).message } };
+    }
+  }
+  if (parts.length === 3 && req.method === "GET") {
+    const build = service.getFirmware(parts[1] as string, parts[2] as string);
+    return build !== undefined
+      ? { status: 200, body: build }
+      : { status: 404, body: { error: "no such firmware" } };
+  }
+  return { status: 404, body: { error: "unknown route" } };
+}
+
+async function routeRollouts(
+  service: CloudService,
+  req: IncomingMessage,
+  parts: string[],
+): Promise<JsonResponse> {
+  if (parts.length === 1 && req.method === "POST") {
+    const body = await readJson(req);
+    if (!isRecord(body) || !Array.isArray(body["deviceIds"]) || typeof body["targetVersion"] !== "string") {
+      return { status: 400, body: { error: "deviceIds and targetVersion are required" } };
+    }
+    const deviceIds: string[] = [];
+    for (const entry of body["deviceIds"]) {
+      if (typeof entry !== "string") {
+        return { status: 400, body: { error: "deviceIds must be strings" } };
+      }
+      deviceIds.push(entry);
+    }
+    const options: RolloutOptions = {};
+    if (typeof body["batchSize"] === "number") {
+      options.batchSize = body["batchSize"];
+    }
+    if (typeof body["maxFailures"] === "number") {
+      options.maxFailures = body["maxFailures"];
+    }
+    return { status: 201, body: service.createRollout(deviceIds, body["targetVersion"], options) };
+  }
+
+  const rolloutId = parts[1];
+  if (rolloutId === undefined) {
+    return { status: 404, body: { error: "unknown route" } };
+  }
+
+  try {
+    if (parts.length === 2 && req.method === "GET") {
+      return { status: 200, body: service.rolloutStatus(rolloutId) };
+    }
+    if (parts.length === 3 && parts[2] === "next-batch" && req.method === "POST") {
+      return { status: 200, body: service.advanceRollout(rolloutId) };
+    }
+    if (parts.length === 3 && parts[2] === "report" && req.method === "POST") {
+      const body = await readJson(req);
+      if (
+        !isRecord(body) ||
+        typeof body["deviceId"] !== "string" ||
+        (body["outcome"] !== "applied" && body["outcome"] !== "failed")
+      ) {
+        return { status: 400, body: { error: "deviceId and outcome (applied or failed) are required" } };
+      }
+      return { status: 200, body: service.reportRollout(rolloutId, body["deviceId"], body["outcome"]) };
+    }
+  } catch (error) {
+    return { status: 404, body: { error: (error as Error).message } };
+  }
+  return { status: 404, body: { error: "unknown route" } };
+}
+
 async function route(service: CloudService, req: IncomingMessage): Promise<JsonResponse> {
   const url = new URL(req.url ?? "/", "http://localhost");
   const parts = url.pathname.split("/").filter((part) => part.length > 0);
 
+  if (parts.length === 1 && parts[0] === "ca" && req.method === "GET") {
+    return { status: 200, body: { caPublicKeyPem: service.caPublicKeyPem } };
+  }
+  if (parts.length === 1 && parts[0] === "provision" && req.method === "POST") {
+    return routeProvision(service, req);
+  }
+  if (parts[0] === "firmware") {
+    return routeFirmware(service, req, parts);
+  }
+  if (parts[0] === "rollouts") {
+    return routeRollouts(service, req, parts);
+  }
   if (parts.length === 1 && parts[0] === "devices") {
     return routeDevicesRoot(service, req);
   }
