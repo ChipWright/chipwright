@@ -105,7 +105,7 @@
   inspector.addEventListener("change", (e) => {
     const t = e.target, f = state.form;
     if (!t.dataset.toggle) return;
-    if (t.dataset.toggle === "battery") { f.battery.enabled = t.checked; if (!f.battery.enabled) f.battery.rechargeable = false; renderInspector(); }
+    if (t.dataset.toggle === "battery") { f.battery.enabled = t.checked; f.battery.rechargeable = t.checked; renderInspector(); }
     else if (t.dataset.toggle === "recharge") f.battery.rechargeable = t.checked;
     else if (t.dataset.toggle === "encryption") f.encryption = t.checked;
     scheduleApply();
