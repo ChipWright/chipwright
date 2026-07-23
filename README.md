@@ -19,7 +19,7 @@ APIs, tests, documentation, and certification checklists are generated.
 | Path                  | Purpose                                             | Status      |
 | --------------------- | --------------------------------------------------- | ----------- |
 | `core/device-engine`  | DDL compiler and Hardware Abstraction Layer         | In progress |
-| `sdk/firmware`        | Device SDK (lifecycle, telemetry, OTA, power)       | Planned     |
+| `sdk/firmware`        | Device SDK and HAL (lifecycle, telemetry, drivers)  | In progress |
 | `simulator`           | Digital-twin engine and fault injection             | Planned     |
 | `protocols`           | Matter, Thread, BLE, WiFi, and legacy adapters      | Planned     |
 | `cloud`               | Device registry, telemetry, command dispatch, OTA   | Planned     |
