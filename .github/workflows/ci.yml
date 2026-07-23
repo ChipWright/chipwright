@@ -54,3 +54,6 @@ jobs:
 
       - name: Run the Matter commissioning demonstration
         run: make -C protocols example
+
+      - name: Run the device acceptance suite
+        run: make -C tests test

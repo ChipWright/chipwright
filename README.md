@@ -26,7 +26,7 @@ APIs, tests, documentation, and certification checklists are generated.
 | `protocols`           | Matter, Thread, BLE, WiFi, and legacy adapters      | In progress |
 | `cloud`               | Device registry, telemetry, command dispatch, OTA   | Planned     |
 | `apps/ide`            | Developer IDE (visual designer, twin debugger)      | Planned     |
-| `tests`              | Test framework and hardware-in-the-loop harness     | Planned     |
+| `tests`              | Test framework and hardware-in-the-loop harness     | In progress |
 | `docs`                | Documentation generator, roadmap, and RFCs          | Ongoing     |
 | `examples`            | Reference device definitions                         | Ongoing     |
 
