@@ -11,6 +11,9 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider("openhome.devices", devices),
+    vscode.commands.registerCommand("openhome.newDevice", () => {
+      StudioPanel.newDevice(context);
+    }),
     vscode.commands.registerCommand("openhome.openDesigner", (uri?: vscode.Uri) => {
       StudioPanel.show(context, "designer", uri);
     }),

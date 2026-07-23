@@ -15,8 +15,10 @@ export {
   formToManifest,
   emptyForm,
   DESIGNER_PROTOCOLS,
+  DEVICE_TEMPLATES,
   type DeviceForm,
   type FormCapability,
+  type DeviceTemplate,
 } from "./designer.js";
 export {
   parseSampleLine,

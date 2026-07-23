@@ -1,7 +1,7 @@
 // Webview host for the studio UI. It owns a single panel, loads the branded webview, and
-// bridges its messages to the studio core: the webview asks for the current manifest state,
-// the host validates and generates it through the core and posts the result back. The rich
-// designer and live twin debugger render inside the webview; this host stays a thin bridge.
+// bridges its messages to the studio core: the webview edits a device as a form and asks the
+// host to compile, save, run the twin, or open the creation wizard. The rich designer, twin
+// debugger, and wizard render inside the webview; this host stays a thin bridge to the core.
 
 import * as vscode from "vscode";
 import { spawn } from "node:child_process";
@@ -9,6 +9,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import {
   DESIGNER_PROTOCOLS,
+  DEVICE_TEMPLATES,
   formToManifest,
   generate,
   manifestToForm,
@@ -25,6 +26,7 @@ type InboundMessage =
   | { type: "ready" | "refresh" | "stopTwin" }
   | { type: "startTwin"; fault: TwinFault; faultAt: number; offset: number }
   | { type: "applyForm"; form: DeviceForm }
+  | { type: "createDevice"; form: DeviceForm }
   | { type: "saveForm"; form: DeviceForm };
 
 // A fallback manifest so the panel is useful even before a device.yaml is open. It mirrors
@@ -49,6 +51,7 @@ export class StudioPanel {
   private readonly disposables: vscode.Disposable[] = [];
   private activeUri: vscode.Uri | undefined;
   private twin: TwinHandle | undefined;
+  private pendingWizard = false;
 
   private constructor(
     private readonly panel: vscode.WebviewPanel,
@@ -58,12 +61,24 @@ export class StudioPanel {
     this.panel.webview.onDidReceiveMessage(
       (message: InboundMessage) => {
         switch (message.type) {
-          case "ready":
+          case "ready": {
+            const pending = this.pendingWizard;
+            this.pendingWizard = false;
+            void this.sendInit().then(() => {
+              if (pending) {
+                this.post({ type: "openWizard" });
+              }
+            });
+            break;
+          }
           case "refresh":
             void this.sendInit();
             break;
           case "applyForm":
             this.applyForm(message.form);
+            break;
+          case "createDevice":
+            this.createDevice(message.form);
             break;
           case "saveForm":
             void this.saveForm(message.form);
@@ -85,16 +100,11 @@ export class StudioPanel {
   static show(context: vscode.ExtensionContext, tab: Tab, uri?: vscode.Uri): void {
     const column = vscode.ViewColumn.Beside;
     if (StudioPanel.current === undefined) {
-      const panel = vscode.window.createWebviewPanel(
-        "openhomeStudio",
-        "OpenHome Studio",
-        column,
-        {
-          enableScripts: true,
-          retainContextWhenHidden: true,
-          localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, "media")],
-        },
-      );
+      const panel = vscode.window.createWebviewPanel("openhomeStudio", "OpenHome Studio", column, {
+        enableScripts: true,
+        retainContextWhenHidden: true,
+        localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, "media")],
+      });
       StudioPanel.current = new StudioPanel(panel, context);
     } else {
       StudioPanel.current.panel.reveal(column);
@@ -105,6 +115,22 @@ export class StudioPanel {
     }
     StudioPanel.current.post({ type: "focus", tab });
     void StudioPanel.current.sendInit();
+  }
+
+  // Opens the panel and launches the creation wizard. On a fresh panel the wizard is deferred
+  // until the webview signals it is ready; on an existing panel it opens immediately.
+  static newDevice(context: vscode.ExtensionContext): void {
+    const existed = StudioPanel.current !== undefined;
+    StudioPanel.show(context, "designer");
+    const panel = StudioPanel.current;
+    if (panel === undefined) {
+      return;
+    }
+    if (existed) {
+      panel.post({ type: "openWizard" });
+    } else {
+      panel.pendingWizard = true;
+    }
   }
 
   private async manifestText(): Promise<{ yaml: string; source: string }> {
@@ -122,8 +148,8 @@ export class StudioPanel {
     return { yaml: EXAMPLE_MANIFEST, source: "built-in example" };
   }
 
-  // Sends the full designer state: the editable form, the protocol catalog, and the result
-  // of compiling the current manifest. Used on load and refresh.
+  // Sends the full designer state: the editable form, the protocol and template catalogs, and
+  // the result of compiling the current manifest. Used on load and refresh.
   private async sendInit(): Promise<void> {
     const { yaml, source } = await this.manifestText();
     this.post({
@@ -131,6 +157,7 @@ export class StudioPanel {
       source,
       form: manifestToForm(yaml),
       protocols: DESIGNER_PROTOCOLS,
+      templates: DEVICE_TEMPLATES,
       ...this.compile(yaml),
     });
   }
@@ -141,16 +168,41 @@ export class StudioPanel {
     this.post({ type: "update", ...this.compile(formToManifest(form)) });
   }
 
+  // Loads a newly created device into the editor as an unsaved manifest. The next save prompts
+  // for a location because there is no target file yet.
+  private createDevice(form: DeviceForm): void {
+    this.activeUri = undefined;
+    this.post({ type: "update", ...this.compile(formToManifest(form)) });
+  }
+
   private async saveForm(form: DeviceForm): Promise<void> {
-    const target = this.saveTarget();
+    let target = this.saveTarget();
     if (target === null) {
-      this.post({ type: "saveError", message: "Select a device manifest to save to." });
-      return;
+      target = await this.promptSaveTarget(form);
+      if (target === null) {
+        this.post({ type: "saveError", message: "Save cancelled." });
+        return;
+      }
     }
     const yaml = formToManifest(form);
     await vscode.workspace.fs.writeFile(target, new TextEncoder().encode(yaml));
     this.activeUri = target;
     this.post({ type: "saved", source: vscode.workspace.asRelativePath(target) });
+    void vscode.commands.executeCommand("openhome.refreshDevices");
+  }
+
+  private async promptSaveTarget(form: DeviceForm): Promise<vscode.Uri | null> {
+    const options: vscode.SaveDialogOptions = {
+      filters: { "Device manifest": ["yaml", "yml"] },
+      saveLabel: "Create device manifest",
+    };
+    const folder = vscode.workspace.workspaceFolders?.[0];
+    if (folder !== undefined) {
+      const name = validate(formToManifest(form)).deviceName ?? "device";
+      options.defaultUri = vscode.Uri.joinPath(folder.uri, name, "device.yaml");
+    }
+    const picked = await vscode.window.showSaveDialog(options);
+    return picked ?? null;
   }
 
   private compile(yaml: string): {
@@ -253,6 +305,8 @@ export class StudioPanel {
     const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "studio.js"));
     const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "studio.css"));
     const nonce = createNonce();
+    const home =
+      '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2.5 11.2l1.3 1.5L5 11.7V21h5.5v-5.5h3V21H19v-9.3l1.2 1 1.3-1.5zM7 19v-9l5-4.3 5 4.3v9h-1.5v-5.5h-7V19z"/></svg>';
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -265,17 +319,64 @@ export class StudioPanel {
 </head>
 <body>
 <header class="topbar">
-  <span class="brand">OpenHome Studio</span>
-  <nav class="tabs">
-    <button class="tab" data-tab="designer" aria-current="true">Designer</button>
-    <button class="tab" data-tab="twin">Twin</button>
-  </nav>
-  <button class="refresh" id="refresh">Refresh</button>
+  <div class="wordmark"><span class="glyph">${home}</span><b>OpenHome Studio</b></div>
+  <div class="context"><span class="sep">/</span><span class="device" id="ctx-device">device</span><span class="pill idle" id="ctx-pill"><span class="dot"></span><span id="ctx-pill-text">...</span></span></div>
+  <button class="btn ghost small" id="new-device"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>New device</button>
+  <div class="seg" role="tablist">
+    <button role="tab" aria-selected="true" data-tab="designer">Designer</button>
+    <button role="tab" aria-selected="false" data-tab="twin">Twin</button>
+  </div>
 </header>
-<main>
-  <section class="view" id="view-designer"></section>
-  <section class="view" id="view-twin" hidden></section>
-</main>
+
+<section class="tabview" id="tab-designer">
+  <div class="split"><div class="inspector" id="inspector"></div><div class="output" id="output"></div></div>
+</section>
+
+<section class="tabview" id="tab-twin" hidden>
+  <div class="twin">
+    <div class="card">
+      <div class="toolbar">
+        <button class="btn primary" id="twin-run"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span id="twin-run-label">Start</span></button>
+        <div class="ctl">Fault
+          <div class="seg mini" id="fault-seg">
+            <button aria-selected="true" data-fault="none">none</button>
+            <button aria-selected="false" data-fault="stuck">stuck</button>
+            <button aria-selected="false" data-fault="fail">fail</button>
+            <button aria-selected="false" data-fault="offset">offset</button>
+          </div>
+        </div>
+        <div class="ctl">at tick
+          <div class="stepper"><button data-step="at" data-d="-1">-</button><input id="fault-at" value="6"><button data-step="at" data-d="1">+</button></div>
+        </div>
+        <div class="ctl is-hidden" id="offset-ctl">offset
+          <div class="stepper"><button data-step="off" data-d="-1">-</button><input id="fault-off" value="5"><button data-step="off" data-d="1">+</button></div>
+        </div>
+        <span class="spring"></span>
+        <span class="pill idle" id="twin-status"><span class="dot"></span><span id="twin-status-text">idle</span></span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="readout"><span class="val" id="twin-val">--</span><span class="unit" id="twin-unit">celsius</span><span class="meta"><span id="twin-count">0</span> samples</span></div>
+      <div class="chart-wrap"><canvas id="chart"></canvas><div class="chart-empty" id="chart-empty">Start the twin to stream live telemetry</div></div>
+      <div class="chart-legend"><span class="k"><span class="swatch temp"></span>temperature</span><span class="k"><span class="swatch fault"></span>fault injected</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="modal-scrim" id="wizard" hidden role="dialog" aria-modal="true" aria-label="New device">
+  <div class="modal" id="wiz-modal">
+    <header>
+      <h2>New device</h2>
+      <div class="steps"><span class="s" data-s="1">1 &middot; Template</span><span class="s" data-s="2">2 &middot; Details</span></div>
+      <button class="icon-btn" data-wiz="cancel" title="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </header>
+    <div class="modal-body" id="wiz-body"></div>
+    <footer id="wiz-footer"></footer>
+  </div>
+</div>
+
+<div class="toast" id="toast"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 13 4 4L19 7"/></svg><span id="toast-text"></span></div>
+
 <script nonce="${nonce}" src="${scriptUri.toString()}"></script>
 </body>
 </html>

@@ -16,6 +16,7 @@
   "main": "./dist/extension.js",
   "activationEvents": [
     "onView:openhome.devices",
+    "onCommand:openhome.newDevice",
     "onCommand:openhome.openDesigner",
     "onCommand:openhome.debugTwin"
   ],
@@ -37,7 +38,19 @@
         }
       ]
     },
+    "viewsWelcome": [
+      {
+        "view": "openhome.devices",
+        "contents": "No devices yet.\n\nCreate one from a template, or start from scratch.\n[Create device](command:openhome.newDevice)\n\nAlready have device.yaml files? Open the folder that contains them, then refresh.\n[Open Folder](command:vscode.openFolder)"
+      }
+    ],
     "commands": [
+      {
+        "command": "openhome.newDevice",
+        "title": "New Device",
+        "category": "OpenHome",
+        "icon": "$(add)"
+      },
       {
         "command": "openhome.openDesigner",
         "title": "Open Device Designer",
@@ -58,9 +71,14 @@
     "menus": {
       "view/title": [
         {
+          "command": "openhome.newDevice",
+          "when": "view == openhome.devices",
+          "group": "navigation@1"
+        },
+        {
           "command": "openhome.refreshDevices",
           "when": "view == openhome.devices",
-          "group": "navigation"
+          "group": "navigation@2"
         }
       ]
     }

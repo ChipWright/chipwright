@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   DESIGNER_PROTOCOLS,
+  DEVICE_TEMPLATES,
   emptyForm,
   formToManifest,
   manifestToForm,
@@ -89,4 +90,17 @@ test("a form built from scratch generates a valid manifest", () => {
 test("emptyForm is empty and the protocol catalog is non-empty", () => {
   assert.deepEqual(emptyForm().capabilities, []);
   assert.ok(DESIGNER_PROTOCOLS.includes("matter"));
+});
+
+test("every device template produces a valid manifest", () => {
+  assert.ok(DEVICE_TEMPLATES.length >= 1);
+  for (const template of DEVICE_TEMPLATES) {
+    const result = validate(formToManifest(template.form));
+    assert.equal(result.valid, true, `template ${template.id} is invalid`);
+    assert.equal(
+      result.diagnostics.some((d) => d.severity === "error"),
+      false,
+      `template ${template.id} has errors`,
+    );
+  }
 });

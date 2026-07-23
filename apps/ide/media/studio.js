@@ -1,501 +1,352 @@
-// Webview UI script. It runs sandboxed in the panel with no Node or VS Code access, and
-// talks to the extension host only through postMessage. The designer edits the device as a
-// form and asks the host to recompile the manifest on every change; the twin view sends run
-// controls and plots the telemetry the host streams from the twin binary. All real work
-// (compiling, saving, running the twin) happens in the host via the studio core.
+// Webview UI script. It runs sandboxed in the panel with no Node or VS Code access, and talks
+// to the extension host only through postMessage. The designer edits a device as a form and
+// asks the host to recompile through the studio core; the twin view sends run controls and
+// plots the telemetry the host streams from the twin binary; the wizard creates a device from
+// a host-provided template. All real work happens in the host; this script only draws intent.
 
 (function () {
+  "use strict";
   const vscode = acquireVsCodeApi();
+  const $ = (s, r) => (r || document).querySelector(s);
+  const NAME = /^[a-z][a-z0-9_]*$/;
 
-  const tabs = document.querySelectorAll(".tab");
-  const views = {
-    designer: document.getElementById("view-designer"),
-    twin: document.getElementById("view-twin"),
+  const state = { form: null, protocols: [], templates: [], source: "" };
+
+  const ICON = {
+    trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16M9 7V5h6v2m-8 0 1 13h8l1-13"/></svg>',
+    plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>',
+    file: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2h8l4 4v16H6z"/><path d="M14 2v4h4"/></svg>',
+    save: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 3h11l3 3v15H5zM8 3v5h7"/></svg>',
+  };
+  const TICON = {
+    thermostat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14 14V5a2 2 0 0 0-4 0v9a4 4 0 1 0 4 0z"/></svg>',
+    environment_sensor: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg>',
+    smart_plug: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 2v6M15 2v6M6 8h12v3a6 6 0 0 1-12 0zM12 17v5"/></svg>',
+    smart_light: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10c1 1 1 2 1 3h6c0-1 0-2 1-3a6 6 0 0 0-4-10z"/></svg>',
+    motion_sensor: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 12a7 7 0 0 1 7-7m0 14a7 7 0 0 0 7-7M8.5 12a3.5 3.5 0 0 1 3.5-3.5"/></svg>',
+    __blank__: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 5v14M5 12h14"/></svg>',
   };
 
-  function showTab(name) {
-    for (const tab of tabs) {
-      tab.setAttribute("aria-current", String(tab.dataset.tab === name));
-    }
-    for (const key of Object.keys(views)) {
-      views[key].hidden = key !== name;
-    }
+  function esc(v) { return String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+  function emptyForm() { return { name: "", category: "", manufacturer: "", capabilities: [], protocols: [], battery: { enabled: false, rechargeable: false }, encryption: false }; }
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+  function toast(msg) { const t = $("#toast"); $("#toast-text").textContent = msg; t.classList.add("show"); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove("show"), 2200); }
+
+  // ---- Tabs --------------------------------------------------------------
+  function selectTab(name) {
+    document.querySelectorAll('[role="tab"]').forEach((x) => x.setAttribute("aria-selected", String(x.dataset.tab === name)));
+    $("#tab-designer").hidden = name !== "designer";
+    $("#tab-twin").hidden = name !== "twin";
+    if (name === "twin") requestAnimationFrame(draw);
+  }
+  document.querySelectorAll('[role="tab"]').forEach((t) => t.addEventListener("click", () => selectTab(t.dataset.tab)));
+  $("#new-device").addEventListener("click", openWizard);
+
+  // ---- Designer inputs ---------------------------------------------------
+  const inspector = $("#inspector");
+  let applyTimer = null;
+  function scheduleApply() {
+    if (applyTimer !== null) clearTimeout(applyTimer);
+    applyTimer = setTimeout(() => vscode.postMessage({ type: "applyForm", form: state.form }), 200);
   }
 
-  for (const tab of tabs) {
-    tab.addEventListener("click", () => showTab(tab.dataset.tab));
+  function renderInspector() {
+    const f = state.form;
+    const caps = f.capabilities.map((c, i) => {
+      const detail = c.kind === "sensor"
+        ? '<div class="field"><label>Unit</label><input type="text" spellcheck="false" autocomplete="off" data-cap="' + i + '" data-field="unit" value="' + esc(c.unit) + '" placeholder="e.g. celsius"></div>'
+          + '<div class="field-row"><div class="field"><label>Min</label><input type="number" data-cap="' + i + '" data-field="min" value="' + (c.min == null ? "" : c.min) + '"></div>'
+          + '<div class="field"><label>Max</label><input type="number" data-cap="' + i + '" data-field="max" value="' + (c.max == null ? "" : c.max) + '"></div></div>'
+        : '<div class="field"><label>Modes (comma separated)</label><input type="text" spellcheck="false" autocomplete="off" data-cap="' + i + '" data-field="modes" value="' + esc(c.modes.join(", ")) + '" placeholder="on, off"></div>';
+      return '<div class="cap"><div class="cap-top">'
+        + '<div class="field cap-key"><input type="text" spellcheck="false" autocomplete="off" data-cap="' + i + '" data-field="key" value="' + esc(c.key) + '" placeholder="capability_key"></div>'
+        + '<div class="seg mini"><button data-captype="' + i + '" data-kind="sensor" aria-selected="' + (c.kind === "sensor") + '">sensor</button>'
+        + '<button data-captype="' + i + '" data-kind="actuator" aria-selected="' + (c.kind === "actuator") + '">actuator</button></div>'
+        + '<button class="icon-btn trash" data-remove="' + i + '" title="Remove">' + ICON.trash + '</button>'
+        + '</div><div class="cap-detail">' + detail + '</div></div>';
+    }).join("");
+
+    const chips = state.protocols.map((p) =>
+      '<button class="chip" data-proto="' + p + '" aria-pressed="' + f.protocols.includes(p) + '">' + p + '</button>').join("");
+
+    inspector.innerHTML =
+      '<div class="group"><div class="group-head"><h3>Device</h3></div>'
+      + '<div class="field"><label>Name</label><input type="text" spellcheck="false" autocomplete="off" autocapitalize="off" data-bind="name" value="' + esc(f.name) + '" placeholder="lower_snake_case"></div>'
+      + '<div class="field-row"><div class="field"><label>Category</label><input type="text" spellcheck="false" autocomplete="off" data-bind="category" value="' + esc(f.category) + '"></div>'
+      + '<div class="field"><label>Manufacturer</label><input type="text" spellcheck="false" autocomplete="off" data-bind="manufacturer" value="' + esc(f.manufacturer) + '"></div></div></div>'
+      + '<div class="group"><div class="group-head"><h3>Capabilities</h3></div>' + caps
+      + '<div class="add-row"><button class="btn ghost small" data-add="sensor">' + ICON.plus + 'Sensor</button>'
+      + '<button class="btn ghost small" data-add="actuator">' + ICON.plus + 'Actuator</button></div></div>'
+      + '<div class="group"><div class="group-head"><h3>Connectivity</h3></div><div class="chips">' + chips + '</div></div>'
+      + '<div class="group"><div class="group-head"><h3>Power &amp; Security</h3></div>'
+      + toggleRow("battery", "Battery powered", "This device runs on battery", f.battery.enabled, false)
+      + toggleRow("recharge", "Rechargeable", "Battery can be recharged", f.battery.rechargeable, !f.battery.enabled)
+      + toggleRow("encryption", "Encryption", "Encrypt device communications", f.encryption, false)
+      + '</div>';
   }
 
-  document.getElementById("refresh").addEventListener("click", () => {
-    vscode.postMessage({ type: "refresh" });
+  function toggleRow(key, title, sub, on, disabled) {
+    return '<div class="toggle-row"><div class="label"><span>' + title + '</span><small>' + sub + '</small></div>'
+      + '<label class="switch"><input type="checkbox" data-toggle="' + key + '"' + (on ? " checked" : "") + (disabled ? " disabled" : "") + '><span class="track"></span></label></div>';
+  }
+
+  inspector.addEventListener("input", (e) => {
+    const t = e.target, f = state.form;
+    if (t.dataset.bind) f[t.dataset.bind] = t.value;
+    else if (t.dataset.cap !== undefined) {
+      const c = f.capabilities[+t.dataset.cap], field = t.dataset.field;
+      if (field === "modes") c.modes = t.value.split(",").map((s) => s.trim()).filter(Boolean);
+      else if (field === "min" || field === "max") c[field] = t.value === "" ? null : Number(t.value);
+      else c[field] = t.value;
+    } else return;
+    scheduleApply();
   });
 
-  function escapeHtml(value) {
-    return String(value)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
-  }
+  inspector.addEventListener("change", (e) => {
+    const t = e.target, f = state.form;
+    if (!t.dataset.toggle) return;
+    if (t.dataset.toggle === "battery") { f.battery.enabled = t.checked; if (!f.battery.enabled) f.battery.rechargeable = false; renderInspector(); }
+    else if (t.dataset.toggle === "recharge") f.battery.rechargeable = t.checked;
+    else if (t.dataset.toggle === "encryption") f.encryption = t.checked;
+    scheduleApply();
+  });
 
-  function el(tag, attrs, children) {
-    const node = document.createElement(tag);
-    for (const key of Object.keys(attrs || {})) {
-      if (key === "class") {
-        node.className = attrs[key];
-      } else if (key === "text") {
-        node.textContent = attrs[key];
-      } else {
-        node.setAttribute(key, attrs[key]);
-      }
+  inspector.addEventListener("click", (e) => {
+    const f = state.form;
+    const proto = e.target.closest("[data-proto]");
+    const add = e.target.closest("[data-add]");
+    const rm = e.target.closest("[data-remove]");
+    const ct = e.target.closest("[data-captype]");
+    if (proto) {
+      const p = proto.dataset.proto;
+      f.protocols = f.protocols.includes(p) ? f.protocols.filter((x) => x !== p) : f.protocols.concat(p);
+      proto.setAttribute("aria-pressed", f.protocols.includes(p));
+      scheduleApply(); return;
     }
-    for (const child of children || []) {
-      node.appendChild(child);
+    if (add) { f.capabilities.push(add.dataset.add === "sensor" ? { key: "", kind: "sensor", unit: "", min: null, max: null } : { key: "", kind: "actuator", modes: [] }); renderInspector(); scheduleApply(); return; }
+    if (rm) { f.capabilities.splice(+rm.dataset.remove, 1); renderInspector(); scheduleApply(); return; }
+    if (ct) { const c = f.capabilities[+ct.dataset.captype]; if (c.kind === ct.dataset.kind) return; f.capabilities[+ct.dataset.captype] = ct.dataset.kind === "sensor" ? { key: c.key, kind: "sensor", unit: "", min: null, max: null } : { key: c.key, kind: "actuator", modes: [] }; renderInspector(); scheduleApply(); }
+  });
+
+  // ---- Output (rendered from host compile results) -----------------------
+  function highlightYaml(yaml) {
+    return esc(yaml).split("\n").map((line) =>
+      line.replace(/^(\s*)([A-Za-z0-9_]+)(:)/, '$1<span class="k">$2</span>$3')
+        .replace(/(:\s*)(-?\d+(?:\.\d+)?|true|false)\b/g, '$1<span class="n">$2</span>')).join("\n");
+  }
+
+  function renderOutput(data) {
+    const errors = (data.diagnostics || []).filter((d) => d.severity === "error").length;
+    const valid = data.valid;
+    $("#ctx-device").textContent = data.deviceName || state.form.name || "device";
+    const pill = $("#ctx-pill");
+    pill.className = "pill " + (valid ? "ok" : "bad");
+    $("#ctx-pill-text").textContent = valid ? "valid" : errors + (errors === 1 ? " error" : " errors");
+
+    const diags = data.diagnostics || [];
+    const diagHtml = diags.length === 0
+      ? '<div class="empty-note">No diagnostics.</div>'
+      : diags.map((d) => '<div class="diag ' + esc(d.severity) + '"><code>' + esc(d.path || "manifest") + '</code><span>' + esc(d.message) + '</span></div>').join("");
+    const files = data.files || [];
+    const fileHtml = files.length === 0
+      ? '<div class="empty-note">Fix the errors above to generate artifacts.</div>'
+      : '<div class="filelist">' + files.map((f) => '<div class="filerow">' + ICON.file + '<code>' + esc(f) + '</code></div>').join("") + '</div>';
+
+    $("#output").innerHTML =
+      '<div class="out-status"><span class="pill ' + (valid ? "ok" : "bad") + '"><span class="dot"></span>' + (valid ? "Valid" : "Invalid") + '</span>'
+      + '<span class="counts">' + state.form.capabilities.length + ' capabilities &middot; ' + state.form.protocols.length + ' protocols</span>'
+      + '<button class="btn primary small push-right" id="save-btn">' + ICON.save + 'Save</button></div>'
+      + '<div class="out-section"><h4>Source</h4><div class="empty-note">' + esc(state.source) + '</div></div>'
+      + '<div class="out-section"><h4>Diagnostics ' + (diags.length ? "(" + diags.length + ")" : "") + '</h4>' + diagHtml + '</div>'
+      + '<div class="out-section"><h4>Generated artifacts ' + (files.length ? "(" + files.length + ")" : "") + '</h4>' + fileHtml + '</div>'
+      + '<div class="out-section"><h4>device.yaml</h4><pre class="code"><code>' + highlightYaml(data.yaml || "") + '</code></pre></div>';
+
+    $("#save-btn").addEventListener("click", () => vscode.postMessage({ type: "saveForm", form: state.form }));
+  }
+
+  // ---- Creation wizard ---------------------------------------------------
+  const scrim = $("#wizard"), wizBody = $("#wiz-body"), wizFooter = $("#wiz-footer");
+  const wiz = { form: null };
+
+  function setStep(n) { document.querySelectorAll(".modal .steps .s").forEach((s) => s.classList.toggle("active", s.dataset.s === String(n))); }
+  function openWizard() { renderGallery(); scrim.hidden = false; }
+  function closeWizard() { scrim.hidden = true; }
+
+  function galleryTiles() {
+    const blank = '<button class="tile" data-tpl="__blank__"><span class="ticon">' + TICON.__blank__ + '</span><h4>No template</h4><p>Start from scratch in the full editor.</p><span class="meta">empty manifest</span></button>';
+    const tiles = state.templates.map((t) => {
+      const meta = t.form.capabilities.map((c) => c.key).join(", ") + " &middot; " + t.form.protocols.join(", ");
+      return '<button class="tile" data-tpl="' + esc(t.id) + '"><span class="ticon">' + (TICON[t.id] || ICON.plus) + '</span><h4>' + esc(t.title) + '</h4><p>' + esc(t.description) + '</p><span class="meta">' + meta + '</span></button>';
+    }).join("");
+    return blank + tiles;
+  }
+
+  function renderGallery() {
+    setStep(1);
+    wizBody.innerHTML = '<div class="gallery">' + galleryTiles() + '</div>';
+    wizFooter.innerHTML = '<button class="btn ghost" data-wiz="cancel">Cancel</button>';
+  }
+
+  function renderDetails(template) {
+    setStep(2);
+    wiz.form = clone(template.form);
+    wizBody.innerHTML = '<p class="based">Based on <b>' + esc(template.title) + '</b></p>'
+      + '<div class="field"><label>Device name</label><input type="text" spellcheck="false" autocomplete="off" autocapitalize="off" id="wz-name" value="' + esc(wiz.form.name) + '" placeholder="lower_snake_case"><small class="hint" id="wz-hint"></small></div>'
+      + '<div class="field-row"><div class="field"><label>Category</label><input type="text" spellcheck="false" autocomplete="off" id="wz-cat" value="' + esc(wiz.form.category) + '"></div>'
+      + '<div class="field"><label>Manufacturer (optional)</label><input type="text" spellcheck="false" autocomplete="off" id="wz-mfr" value="' + esc(wiz.form.manufacturer) + '"></div></div>';
+    wizFooter.innerHTML = '<button class="btn ghost" data-wiz="back">Back</button><button class="btn primary" data-wiz="create">Create device</button>';
+    validateWiz();
+    wizBody.querySelectorAll("input").forEach((i) => i.addEventListener("input", () => {
+      wiz.form.name = $("#wz-name").value; wiz.form.category = $("#wz-cat").value; wiz.form.manufacturer = $("#wz-mfr").value;
+      validateWiz();
+    }));
+    $("#wz-name").focus();
+  }
+
+  function validateWiz() {
+    const valid = NAME.test(wiz.form.name) && wiz.form.category.trim().length > 0;
+    $("#wz-hint").textContent = wiz.form.name && !NAME.test(wiz.form.name) ? "Must be lower_snake_case" : "";
+    const btn = document.querySelector('[data-wiz="create"]');
+    if (btn) btn.disabled = !valid;
+  }
+
+  function createFromForm(form) {
+    state.form = form;
+    closeWizard();
+    renderInspector();
+    selectTab("designer");
+    vscode.postMessage({ type: "createDevice", form: form });
+    toast("Created " + (form.name || "device"));
+  }
+
+  $("#wiz-modal").addEventListener("click", (e) => {
+    const tpl = e.target.closest("[data-tpl]"), w = e.target.closest("[data-wiz]");
+    if (tpl) {
+      const id = tpl.dataset.tpl;
+      if (id === "__blank__") createFromForm(emptyForm());
+      else { const t = state.templates.find((x) => x.id === id); if (t) renderDetails(t); }
+    } else if (w) {
+      const a = w.dataset.wiz;
+      if (a === "cancel") closeWizard();
+      else if (a === "back") renderGallery();
+      else if (a === "create") createFromForm(wiz.form);
     }
-    return node;
-  }
+  });
+  scrim.addEventListener("click", (e) => { if (e.target === scrim) closeWizard(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !scrim.hidden) closeWizard(); });
 
-  // --- Designer -------------------------------------------------------------------------
+  // ---- Twin --------------------------------------------------------------
+  const twin = { running: false, samples: [], tick: 0, timer: null, fault: "none", faultIndex: -1 };
+  const canvas = $("#chart"), ctx = canvas.getContext("2d");
+  const faultSeg = $("#fault-seg"), faultAt = $("#fault-at"), faultOff = $("#fault-off"), offsetCtl = $("#offset-ctl");
 
-  const designer = { form: null, protocols: [] };
-  let applyTimer = null;
+  faultSeg.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-fault]"); if (!b) return;
+    faultSeg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-selected", String(x === b)));
+    twin.fault = b.dataset.fault;
+    offsetCtl.classList.toggle("is-hidden", twin.fault !== "offset");
+  });
+  document.querySelectorAll("[data-step]").forEach((b) => b.addEventListener("click", () => {
+    const input = b.dataset.step === "at" ? faultAt : faultOff;
+    input.value = Math.max(0, (parseInt(input.value, 10) || 0) + Number(b.dataset.d));
+  }));
 
-  function scheduleApply() {
-    if (applyTimer !== null) {
-      clearTimeout(applyTimer);
-    }
-    applyTimer = setTimeout(() => {
-      vscode.postMessage({ type: "applyForm", form: designer.form });
-    }, 200);
-  }
+  $("#twin-run").addEventListener("click", () => twin.running ? vscode.postMessage({ type: "stopTwin" }) : startTwin());
 
-  function field(labelText, input) {
-    return el("label", { class: "field" }, [el("span", { text: labelText }), input]);
-  }
-
-  function textInput(value, onChange) {
-    const input = el("input", { type: "text", value: value || "" });
-    input.addEventListener("input", () => onChange(input.value));
-    return input;
-  }
-
-  function numberInput(value, onChange) {
-    const input = el("input", { type: "number", value: value === null ? "" : String(value) });
-    input.addEventListener("input", () => {
-      onChange(input.value === "" ? null : Number(input.value));
-    });
-    return input;
-  }
-
-  function renderCapabilities(container) {
-    container.textContent = "";
-    designer.form.capabilities.forEach((cap, index) => {
-      const kindSelect = el("select", {}, [
-        el("option", { value: "sensor", text: "sensor" }),
-        el("option", { value: "actuator", text: "actuator" }),
-      ]);
-      kindSelect.value = cap.kind;
-      kindSelect.addEventListener("change", () => {
-        designer.form.capabilities[index] =
-          kindSelect.value === "sensor"
-            ? { key: cap.key, kind: "sensor", unit: "", min: null, max: null }
-            : { key: cap.key, kind: "actuator", modes: [] };
-        renderCapabilities(container);
-        scheduleApply();
-      });
-
-      const detail =
-        cap.kind === "sensor"
-          ? [
-              field("Unit", textInput(cap.unit, (v) => {
-                cap.unit = v;
-                scheduleApply();
-              })),
-              field("Min", numberInput(cap.min, (v) => {
-                cap.min = v;
-                scheduleApply();
-              })),
-              field("Max", numberInput(cap.max, (v) => {
-                cap.max = v;
-                scheduleApply();
-              })),
-            ]
-          : [
-              field(
-                "Modes (comma separated)",
-                textInput(cap.modes.join(", "), (v) => {
-                  cap.modes = v
-                    .split(",")
-                    .map((m) => m.trim())
-                    .filter((m) => m.length > 0);
-                  scheduleApply();
-                }),
-              ),
-            ];
-
-      const remove = el("button", { class: "ghost", text: "Remove" }, []);
-      remove.addEventListener("click", () => {
-        designer.form.capabilities.splice(index, 1);
-        renderCapabilities(container);
-        scheduleApply();
-      });
-
-      const row = el("div", { class: "cap-row" }, [
-        field("Key", textInput(cap.key, (v) => {
-          cap.key = v;
-          scheduleApply();
-        })),
-        field("Type", kindSelect),
-        ...detail,
-        remove,
-      ]);
-      container.appendChild(row);
-    });
-  }
-
-  function renderDesigner() {
-    const form = designer.form;
-    const view = views.designer;
-    view.textContent = "";
-
-    // Device section.
-    const devicePanel = el("div", { class: "panel" }, [
-      el("h2", { text: "Device" }),
-      el("div", { class: "grid" }, [
-        field("Name", textInput(form.name, (v) => {
-          form.name = v;
-          scheduleApply();
-        })),
-        field("Category", textInput(form.category, (v) => {
-          form.category = v;
-          scheduleApply();
-        })),
-        field("Manufacturer", textInput(form.manufacturer, (v) => {
-          form.manufacturer = v;
-          scheduleApply();
-        })),
-      ]),
-    ]);
-
-    // Capabilities section.
-    const capContainer = el("div", { class: "caps" }, []);
-    renderCapabilities(capContainer);
-    const addSensor = el("button", { class: "ghost", text: "Add sensor" }, []);
-    addSensor.addEventListener("click", () => {
-      form.capabilities.push({ key: "", kind: "sensor", unit: "", min: null, max: null });
-      renderCapabilities(capContainer);
-      scheduleApply();
-    });
-    const addActuator = el("button", { class: "ghost", text: "Add actuator" }, []);
-    addActuator.addEventListener("click", () => {
-      form.capabilities.push({ key: "", kind: "actuator", modes: [] });
-      renderCapabilities(capContainer);
-      scheduleApply();
-    });
-    const capPanel = el("div", { class: "panel" }, [
-      el("h2", { text: "Capabilities" }),
-      capContainer,
-      el("div", { class: "controls" }, [addSensor, addActuator]),
-    ]);
-
-    // Connectivity section.
-    const protoBoxes = designer.protocols.map((proto) => {
-      const box = el("input", { type: "checkbox" });
-      box.checked = form.protocols.includes(proto);
-      box.addEventListener("change", () => {
-        if (box.checked) {
-          if (!form.protocols.includes(proto)) {
-            form.protocols.push(proto);
-          }
-        } else {
-          form.protocols = form.protocols.filter((p) => p !== proto);
-        }
-        scheduleApply();
-      });
-      return el("label", { class: "check" }, [box, el("span", { text: proto })]);
-    });
-    const connPanel = el("div", { class: "panel" }, [
-      el("h2", { text: "Connectivity" }),
-      el("div", { class: "checks" }, protoBoxes),
-    ]);
-
-    // Power and security section.
-    const batteryBox = el("input", { type: "checkbox" });
-    batteryBox.checked = form.battery.enabled;
-    const rechargeBox = el("input", { type: "checkbox" });
-    rechargeBox.checked = form.battery.rechargeable;
-    rechargeBox.disabled = !form.battery.enabled;
-    batteryBox.addEventListener("change", () => {
-      form.battery.enabled = batteryBox.checked;
-      rechargeBox.disabled = !batteryBox.checked;
-      scheduleApply();
-    });
-    rechargeBox.addEventListener("change", () => {
-      form.battery.rechargeable = rechargeBox.checked;
-      scheduleApply();
-    });
-    const encryptionBox = el("input", { type: "checkbox" });
-    encryptionBox.checked = form.encryption;
-    encryptionBox.addEventListener("change", () => {
-      form.encryption = encryptionBox.checked;
-      scheduleApply();
-    });
-    const powerPanel = el("div", { class: "panel" }, [
-      el("h2", { text: "Power and security" }),
-      el("div", { class: "checks" }, [
-        el("label", { class: "check" }, [batteryBox, el("span", { text: "Battery powered" })]),
-        el("label", { class: "check" }, [rechargeBox, el("span", { text: "Rechargeable" })]),
-        el("label", { class: "check" }, [encryptionBox, el("span", { text: "Encryption" })]),
-      ]),
-    ]);
-
-    // Results section, updated in place on every recompile.
-    const save = el("button", { class: "refresh", text: "Save to manifest" }, []);
-    save.addEventListener("click", () => {
-      vscode.postMessage({ type: "saveForm", form: designer.form });
-    });
-    const resultsPanel = el("div", { class: "panel" }, [
-      el("div", { class: "panel-head" }, [
-        el("h2", { text: "Compiled" }),
-        el("span", { class: "badge", id: "d-badge", text: "..." }),
-        save,
-      ]),
-      el("p", { class: "muted", id: "d-status" }, []),
-      el("div", { id: "d-diagnostics" }, []),
-      el("h3", { text: "Generated artifacts" }),
-      el("ul", { class: "files", id: "d-files" }, []),
-      el("h3", { text: "Manifest preview" }),
-      el("pre", { class: "code" }, [el("code", { id: "d-yaml" }, [])]),
-    ]);
-
-    view.appendChild(devicePanel);
-    view.appendChild(capPanel);
-    view.appendChild(connPanel);
-    view.appendChild(powerPanel);
-    view.appendChild(resultsPanel);
-  }
-
-  function renderResults(data) {
-    const badge = document.getElementById("d-badge");
-    if (badge === null) {
-      return;
-    }
-    badge.textContent = data.valid ? "valid" : "invalid";
-    badge.className = `badge ${data.valid ? "ok" : "error"}`;
-
-    const diagnostics = document.getElementById("d-diagnostics");
-    diagnostics.innerHTML =
-      data.diagnostics.length === 0
-        ? '<p class="muted">No diagnostics.</p>'
-        : '<ul class="diagnostics">' +
-          data.diagnostics
-            .map((d) => {
-              const where = d.path ? escapeHtml(d.path) : "manifest";
-              return `<li class="diag ${escapeHtml(d.severity)}"><code>${where}</code> ${escapeHtml(d.message)}</li>`;
-            })
-            .join("") +
-          "</ul>";
-
-    const files = document.getElementById("d-files");
-    files.innerHTML =
-      data.files.length === 0
-        ? '<li class="muted">No artifacts.</li>'
-        : data.files.map((f) => `<li><code>${escapeHtml(f)}</code></li>`).join("");
-
-    document.getElementById("d-yaml").textContent = data.yaml;
-  }
-
-  function setStatus(text) {
-    const status = document.getElementById("d-status");
-    if (status !== null) {
-      status.textContent = text;
-    }
-  }
-
-  // --- Twin -----------------------------------------------------------------------------
-
-  const twin = { samples: [], faultAt: -1, running: false };
-
-  views.twin.innerHTML = `
-    <div class="panel">
-      <div class="panel-head">
-        <h1>Twin debugger</h1>
-        <span class="badge" id="twin-badge">idle</span>
-      </div>
-      <div class="controls">
-        <label>Fault
-          <select id="twin-fault">
-            <option value="none">none</option>
-            <option value="stuck">stuck</option>
-            <option value="fail">fail</option>
-            <option value="offset">offset</option>
-          </select>
-        </label>
-        <label>At tick <input id="twin-fault-at" type="number" min="0" value="6" /></label>
-        <label>Offset <input id="twin-offset" type="number" step="0.5" value="5" /></label>
-        <button class="refresh" id="twin-start">Start</button>
-        <button class="ghost" id="twin-stop">Stop</button>
-      </div>
-      <p class="muted" id="twin-status">Start the twin to stream live telemetry.</p>
-    </div>
-    <div class="panel">
-      <div class="panel-head">
-        <h2>Temperature</h2>
-        <span class="reading" id="twin-reading">--</span>
-      </div>
-      <canvas id="twin-chart" width="640" height="240"></canvas>
-    </div>`;
-
-  const faultSelect = document.getElementById("twin-fault");
-  const faultAtInput = document.getElementById("twin-fault-at");
-  const offsetInput = document.getElementById("twin-offset");
-  const twinBadge = document.getElementById("twin-badge");
-  const twinStatus = document.getElementById("twin-status");
-  const reading = document.getElementById("twin-reading");
-  const canvas = document.getElementById("twin-chart");
-
+  function setStatus(cls, text) { const p = $("#twin-status"); p.className = "pill " + cls; $("#twin-status-text").textContent = text; }
   function setRunning(running) {
     twin.running = running;
-    twinBadge.textContent = running ? "running" : "idle";
-    twinBadge.classList.toggle("ok", running);
-    document.getElementById("twin-start").disabled = running;
-    document.getElementById("twin-stop").disabled = !running;
+    $("#twin-run-label").textContent = running ? "Stop" : "Start";
+    $("#twin-run").querySelector("svg").innerHTML = running ? '<rect x="6" y="6" width="12" height="12" rx="1.5"/>' : '<path d="M8 5v14l11-7z"/>';
   }
 
-  document.getElementById("twin-start").addEventListener("click", () => {
-    twin.samples = [];
-    const fault = faultSelect.value;
-    twin.faultAt = fault === "none" ? -1 : Number(faultAtInput.value);
-    reading.textContent = "--";
-    drawChart();
-    vscode.postMessage({
-      type: "startTwin",
-      fault,
-      faultAt: Number(faultAtInput.value),
-      offset: Number(offsetInput.value),
-    });
+  function startTwin() {
+    twin.samples = []; twin.tick = 0;
+    twin.faultIndex = twin.fault === "none" ? -1 : (parseInt(faultAt.value, 10) || 0);
+    $("#twin-val").textContent = "--"; $("#twin-count").textContent = "0";
+    $("#chart-empty").classList.add("is-hidden");
+    draw();
+    vscode.postMessage({ type: "startTwin", fault: twin.fault, faultAt: parseInt(faultAt.value, 10) || 0, offset: parseFloat(faultOff.value) || 0 });
+  }
+
+  function cvar(n) { return getComputedStyle(document.body).getPropertyValue(n).trim(); }
+
+  function draw() {
+    const dpr = window.devicePixelRatio || 1;
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    canvas.width = w * dpr; canvas.height = h * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    const padL = 38, padR = 12, padT = 12, padB = 22;
+    const grid = cvar("--border-soft") || "rgba(128,128,128,.3)", ink = cvar("--fg-muted"), accent = cvar("--accent"), err = cvar("--error");
+    const vals = twin.samples;
+
+    let min = 18, max = 26;
+    if (vals.length) { min = Math.min.apply(null, vals); max = Math.max.apply(null, vals); if (max - min < 2) { const m = (max + min) / 2; min = m - 1; max = m + 1; } const pad = (max - min) * 0.1; min -= pad; max += pad; }
+    const X = (i) => padL + (vals.length <= 1 ? 0 : (i / (vals.length - 1)) * (w - padL - padR));
+    const Y = (v) => padT + (h - padT - padB) * (1 - (v - min) / (max - min));
+
+    ctx.font = "10px " + cvar("--mono");
+    ctx.textBaseline = "middle"; ctx.fillStyle = ink;
+    for (let g = 0; g <= 4; g++) {
+      const y = padT + (h - padT - padB) * (g / 4), val = max - (max - min) * (g / 4);
+      ctx.strokeStyle = grid; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w - padR, y); ctx.stroke();
+      ctx.fillText(val.toFixed(1), 4, y);
+    }
+    if (!vals.length) return;
+
+    if (twin.faultIndex >= 0 && twin.faultIndex < vals.length) {
+      const fx = X(twin.faultIndex);
+      ctx.strokeStyle = err; ctx.setLineDash([4, 4]); ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(fx, padT); ctx.lineTo(fx, h - padB); ctx.stroke(); ctx.setLineDash([]);
+    }
+
+    const grad = ctx.createLinearGradient(0, padT, 0, h - padB);
+    grad.addColorStop(0, accent + "44"); grad.addColorStop(1, accent + "00");
+    ctx.beginPath(); ctx.moveTo(X(0), Y(vals[0]));
+    vals.forEach((v, i) => ctx.lineTo(X(i), Y(v)));
+    ctx.lineTo(X(vals.length - 1), h - padB); ctx.lineTo(X(0), h - padB); ctx.closePath();
+    ctx.fillStyle = grad; ctx.fill();
+
+    ctx.beginPath(); ctx.moveTo(X(0), Y(vals[0]));
+    vals.forEach((v, i) => ctx.lineTo(X(i), Y(v)));
+    ctx.strokeStyle = accent; ctx.lineWidth = 2; ctx.lineJoin = "round"; ctx.stroke();
+
+    const lx = X(vals.length - 1), ly = Y(vals[vals.length - 1]);
+    ctx.fillStyle = accent + "33"; ctx.beginPath(); ctx.arc(lx, ly, 6, 0, 7); ctx.fill();
+    ctx.fillStyle = accent; ctx.beginPath(); ctx.arc(lx, ly, 3.2, 0, 7); ctx.fill();
+  }
+
+  // ---- Messages ----------------------------------------------------------
+  window.addEventListener("message", (event) => {
+    const m = event.data;
+    switch (m.type) {
+      case "init":
+        state.form = m.form; state.protocols = m.protocols; state.templates = m.templates || []; state.source = m.source || "";
+        renderInspector(); renderOutput(m); break;
+      case "update":
+        renderOutput(m); break;
+      case "saved":
+        state.source = m.source; toast("Saved to " + m.source); vscode.postMessage({ type: "refresh" }); break;
+      case "saveError":
+        toast(m.message); break;
+      case "openWizard":
+        openWizard(); break;
+      case "focus":
+        selectTab(m.tab); break;
+      case "twinStarted":
+        setRunning(true); setStatus("run", "running"); break;
+      case "twinStatus":
+        setStatus("run", m.message); break;
+      case "sample":
+        twin.samples.push(m.value); $("#twin-val").textContent = m.value.toFixed(2); $("#twin-unit").textContent = m.unit; $("#twin-count").textContent = twin.samples.length; draw(); break;
+      case "twinExit":
+        setRunning(false); setStatus("idle", "complete"); break;
+      case "twinError":
+        setRunning(false); setStatus("bad", m.message); break;
+    }
   });
-
-  document.getElementById("twin-stop").addEventListener("click", () => {
-    vscode.postMessage({ type: "stopTwin" });
-  });
-
-  function cssVar(name, fallback) {
-    const value = getComputedStyle(document.body).getPropertyValue(name).trim();
-    return value.length > 0 ? value : fallback;
-  }
-
-  function drawChart() {
-    const ctx = canvas.getContext("2d");
-    const width = canvas.width;
-    const height = canvas.height;
-    const pad = 28;
-    ctx.clearRect(0, 0, width, height);
-
-    const grid = cssVar("--vscode-panel-border", "rgba(128,128,128,0.35)");
-    const accent = "#0d8f9c";
-    const ink = cssVar("--vscode-foreground", "#ccc");
-
-    ctx.strokeStyle = grid;
-    ctx.lineWidth = 1;
-    ctx.strokeRect(pad, pad / 2, width - pad * 1.5, height - pad * 1.5);
-
-    const values = twin.samples;
-    if (values.length === 0) {
-      return;
-    }
-
-    let min = Math.min.apply(null, values);
-    let max = Math.max.apply(null, values);
-    if (max - min < 1) {
-      const mid = (max + min) / 2;
-      min = mid - 0.5;
-      max = mid + 0.5;
-    }
-
-    const plotW = width - pad * 1.5 - pad;
-    const plotH = height - pad * 1.5 - pad / 2;
-    const x = (i) => pad + (values.length === 1 ? 0 : (i / (values.length - 1)) * plotW);
-    const y = (v) => pad / 2 + plotH - ((v - min) / (max - min)) * plotH;
-
-    if (twin.faultAt >= 0 && twin.faultAt < values.length) {
-      ctx.strokeStyle = cssVar("--vscode-errorForeground", "#f14c4c");
-      ctx.setLineDash([4, 3]);
-      ctx.beginPath();
-      ctx.moveTo(x(twin.faultAt), pad / 2);
-      ctx.lineTo(x(twin.faultAt), pad / 2 + plotH);
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
-
-    ctx.strokeStyle = accent;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    values.forEach((v, i) => {
-      const px = x(i);
-      const py = y(v);
-      if (i === 0) {
-        ctx.moveTo(px, py);
-      } else {
-        ctx.lineTo(px, py);
-      }
-    });
-    ctx.stroke();
-
-    ctx.fillStyle = ink;
-    ctx.font = "11px sans-serif";
-    ctx.fillText(max.toFixed(1), 2, pad / 2 + 4);
-    ctx.fillText(min.toFixed(1), 2, pad / 2 + plotH);
-  }
 
   setRunning(false);
-  drawChart();
-
-  // --- Messages -------------------------------------------------------------------------
-
-  window.addEventListener("message", (event) => {
-    const message = event.data;
-    switch (message.type) {
-      case "init":
-        designer.form = message.form;
-        designer.protocols = message.protocols;
-        renderDesigner();
-        renderResults(message);
-        setStatus(`Source: ${message.source}`);
-        break;
-      case "update":
-        renderResults(message);
-        break;
-      case "saved":
-        setStatus(`Saved to ${message.source}`);
-        break;
-      case "saveError":
-        setStatus(message.message);
-        break;
-      case "focus":
-        showTab(message.tab);
-        break;
-      case "twinStarted":
-        setRunning(true);
-        twinStatus.textContent = "Streaming telemetry from the twin.";
-        break;
-      case "twinStatus":
-        twinStatus.textContent = message.message;
-        break;
-      case "sample":
-        twin.samples.push(message.value);
-        reading.textContent = `${message.value.toFixed(2)} ${message.unit}`;
-        drawChart();
-        break;
-      case "twinExit":
-        setRunning(false);
-        twinStatus.textContent = "Twin run complete.";
-        break;
-      case "twinError":
-        setRunning(false);
-        twinStatus.textContent = message.message;
-        break;
-    }
-  });
-
+  window.addEventListener("resize", () => { if (!$("#tab-twin").hidden) draw(); });
   vscode.postMessage({ type: "ready" });
 })();

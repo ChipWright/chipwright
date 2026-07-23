@@ -106,3 +106,98 @@ export function formToManifest(form: DeviceForm): string {
 
   return stringify(manifest);
 }
+
+// A starting point for a new device. Each template is a complete, valid form so the creation
+// flow can drop the developer straight into the editor with a working device. "No template"
+// in the UI is not listed here; it uses emptyForm() to start from scratch.
+export interface DeviceTemplate {
+  id: string;
+  title: string;
+  description: string;
+  form: DeviceForm;
+}
+
+export const DEVICE_TEMPLATES: readonly DeviceTemplate[] = [
+  {
+    id: "thermostat",
+    title: "Thermostat",
+    description: "Heat and cool control with a temperature sensor.",
+    form: {
+      name: "smart_thermostat",
+      category: "thermostat",
+      manufacturer: "",
+      capabilities: [
+        { key: "temperature_sensor", kind: "sensor", unit: "celsius", min: -20, max: 50 },
+        { key: "hvac", kind: "actuator", modes: ["heating", "cooling", "off"] },
+      ],
+      protocols: ["matter", "thread"],
+      battery: { enabled: false, rechargeable: false },
+      encryption: true,
+    },
+  },
+  {
+    id: "environment_sensor",
+    title: "Environment sensor",
+    description: "Battery reporter for temperature and humidity.",
+    form: {
+      name: "environment_sensor",
+      category: "sensor",
+      manufacturer: "",
+      capabilities: [
+        { key: "temperature_sensor", kind: "sensor", unit: "celsius", min: -40, max: 85 },
+        { key: "humidity_sensor", kind: "sensor", unit: "percent", min: 0, max: 100 },
+      ],
+      protocols: ["matter", "thread"],
+      battery: { enabled: true, rechargeable: false },
+      encryption: true,
+    },
+  },
+  {
+    id: "smart_plug",
+    title: "Smart plug",
+    description: "On/off control with live power metering.",
+    form: {
+      name: "smart_plug",
+      category: "plug",
+      manufacturer: "",
+      capabilities: [
+        { key: "power_switch", kind: "actuator", modes: ["on", "off"] },
+        { key: "power_meter", kind: "sensor", unit: "watt", min: 0, max: 3680 },
+      ],
+      protocols: ["matter", "wifi"],
+      battery: { enabled: false, rechargeable: false },
+      encryption: true,
+    },
+  },
+  {
+    id: "smart_light",
+    title: "Smart light",
+    description: "Switchable light with selectable scene modes.",
+    form: {
+      name: "smart_light",
+      category: "light",
+      manufacturer: "",
+      capabilities: [
+        { key: "power_switch", kind: "actuator", modes: ["on", "off"] },
+        { key: "scene", kind: "actuator", modes: ["warm_white", "cool_white", "color"] },
+      ],
+      protocols: ["matter", "thread"],
+      battery: { enabled: false, rechargeable: false },
+      encryption: true,
+    },
+  },
+  {
+    id: "motion_sensor",
+    title: "Motion sensor",
+    description: "Battery occupancy detector.",
+    form: {
+      name: "motion_sensor",
+      category: "sensor",
+      manufacturer: "",
+      capabilities: [{ key: "occupancy_sensor", kind: "sensor", unit: "state", min: 0, max: 1 }],
+      protocols: ["matter", "thread"],
+      battery: { enabled: true, rechargeable: false },
+      encryption: true,
+    },
+  },
+];
