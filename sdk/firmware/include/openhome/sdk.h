@@ -24,8 +24,21 @@ typedef enum {
 
 void oh_log(oh_log_level_t level, const char *fmt, ...);
 
-// Emits one telemetry sample. The transport is provided by the SDK; on the native BSP
-// it is written to stdout, and later BSPs forward it to the cloud telemetry pipeline.
+typedef struct {
+  const char *metric;
+  float value;
+  const char *unit;
+} oh_telemetry_sample_t;
+
+typedef void (*oh_telemetry_sink_fn)(const oh_telemetry_sample_t *sample, void *ctx);
+
+// Redirects telemetry samples to a custom sink. The simulator uses this to capture
+// samples, and the cloud BSP will use it to forward them. Passing NULL restores the
+// default sink, which writes to stdout.
+void oh_telemetry_set_sink(oh_telemetry_sink_fn sink, void *ctx);
+
+// Emits one telemetry sample. The transport is provided by the SDK; by default it is
+// written to stdout, unless a sink has been installed with oh_telemetry_set_sink.
 void oh_telemetry_emit(const char *metric, float value, const char *unit);
 
 typedef struct {

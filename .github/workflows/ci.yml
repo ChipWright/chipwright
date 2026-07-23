@@ -42,3 +42,9 @@ jobs:
 
       - name: Build and run reference firmware
         run: make -C sdk/firmware/examples/thermostat run
+
+      - name: Run simulator unit tests
+        run: make -C simulator test
+
+      - name: Run the digital-twin demonstration
+        run: make -C simulator example
