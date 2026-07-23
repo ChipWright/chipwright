@@ -1,0 +1,33 @@
+{
+  "name": "@openhome/marketplace",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Package registry for OpenHome device definitions: signed packages of DDL, drivers, tests, and metadata, with publish, search, and install",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "openhome": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import tsx --test test/*.test.ts",
+    "cli": "tsx src/cli.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@openhome/device-engine": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.0",
+    "tsx": "^4.16.0",
+    "typescript": "^5.5.0"
+  }
+}

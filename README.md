@@ -26,6 +26,7 @@ APIs, tests, documentation, and certification checklists are generated.
 | `simulator`           | Digital-twin engine and fault injection             | In progress |
 | `protocols`           | Matter, Thread, BLE, WiFi, and legacy adapters      | In progress |
 | `cloud`               | Device registry, telemetry, command dispatch, OTA   | In progress |
+| `marketplace`         | Signed device-package registry, publish and install | In progress |
 | `apps/ide`            | Developer IDE, delivered as a VS Code extension      | In progress |
 | `tests`              | Test framework and hardware-in-the-loop harness     | In progress |
 | `docs`                | Documentation generator, roadmap, and RFCs          | Ongoing     |

@@ -42,12 +42,13 @@ every later branch be built and tested without hardware.
 
 ## Current status
 
-Phases 1 through 4 are complete and demonstrated end-to-end for the thermostat device
+Phases 1 through 5 are complete and demonstrated end-to-end for the thermostat device
 class: a single manifest generates the firmware interface, cloud API, tests, and
-documentation; the twin commissions over simulated Matter and survives packet loss; and
-a device streams telemetry through the bridge into the cloud with signed, rollback-safe
-OTA. Phase 5 (Author) is in progress: the documentation site generator and the developer
-IDE.
+documentation; the twin commissions over simulated Matter and survives packet loss; a
+device streams telemetry through the bridge into the cloud with signed, rollback-safe
+OTA; and the developer IDE builds a device visually and debugs its twin. Phase 6 (Scale)
+is in progress, starting with the marketplace: signed device packages that can be
+published and installed with `openhome install <device>`.
 
 ## Developer IDE architecture (branch 10)
 
@@ -75,3 +76,17 @@ The target architecture is an MCP-style agent with tools over platform surfaces 
 DDL, run twin, query telemetry, run tests, propose diffs), with generation validated in
 a sandboxed twin before it reaches a developer. This is a Phase 6 concern and is
 intentionally out of scope for the MVP.
+
+## Marketplace (branch 13)
+
+The `marketplace` package makes a device shareable: a package bundles the DDL manifest
+with any drivers, tests, and documentation that ship alongside it, plus the metadata
+needed to find it. Every package has a deterministic content hash; a publisher signs that
+hash with an Ed25519 key, reusing the supply-chain trust model of the cloud firmware
+signer. The registry refuses to store a malformed package or one whose signature does not
+verify, and an installer re-checks the signature, re-validates the manifest through the
+device engine, enforces the caller's set of trusted publishers, and rejects any file path
+that would escape the target directory before writing anything. The library backs an
+`openhome` command line (`publish`, `install`, `search`, `info`, `list`) over a
+filesystem registry; a networked registry service is the natural next step, mirroring how
+the cloud package grew an HTTP layer over its in-process core.

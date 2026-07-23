@@ -1,6 +1,7 @@
 packages:
   - "core/*"
   - "cloud"
+  - "marketplace"
   - "apps/*"
   # Additional workspaces join as they gain a package.json:
   #   sdk/*, simulator, protocols, tests
