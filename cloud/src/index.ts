@@ -10,3 +10,4 @@ export { createCloudServer } from "./http.js";
 export * from "./identity.js";
 export * from "./signing.js";
 export * from "./ota.js";
+export { runBridge } from "./bridge/uplink.js";
