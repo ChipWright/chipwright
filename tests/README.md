@@ -9,8 +9,10 @@ hardware later, so the same assertions gate both.
 - Capability-level assertion API (`OH_EXPECT`) and a suite runner
 - Abstract device target: `connect`, `read_sensor`, `set_mode`
 - Twin target backend, driving the simulator, SDK, and protocol layer
-- A thermostat acceptance suite that runs against every available target
-- Target selection: unavailable targets are skipped, so the suite is green on the twin
+- Test categories: functional (thermostat acceptance), connectivity (commissioning
+  across packet-loss conditions), and reliability (a soak loop that re-commissions and
+  re-reads over many independently seeded lossy links)
+- Target selection: unavailable targets are skipped, so suites are green on the twin
   while staying ready for hardware
 
 ## Layout
@@ -19,7 +21,9 @@ hardware later, so the same assertions gate both.
 - `src/assert.c` — suite runner
 - `src/target_twin.c` — twin-backed target
 - `src/target_hil.c` — hardware-in-the-loop target (stub, see below)
-- `suites/thermostat/` — the thermostat acceptance suite and runner
+- `suites/thermostat/` — functional acceptance suite (runs against every target)
+- `suites/connectivity/` — commissioning under packet loss
+- `suites/reliability/` — soak loop over many lossy commissioning cycles
 
 ## Running
 
