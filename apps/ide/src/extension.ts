@@ -17,6 +17,19 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("openhome.openDesigner", (uri?: vscode.Uri) => {
       StudioPanel.show(context, "designer", uri);
     }),
+    vscode.commands.registerCommand("openhome.openManifest", async () => {
+      const picked = await vscode.window.showOpenDialog({
+        canSelectMany: false,
+        canSelectFiles: true,
+        canSelectFolders: false,
+        filters: { "Device manifest": ["yaml", "yml"] },
+        openLabel: "Open device manifest",
+      });
+      const uri = picked?.[0];
+      if (uri !== undefined) {
+        StudioPanel.show(context, "designer", uri);
+      }
+    }),
     vscode.commands.registerCommand("openhome.debugTwin", (uri?: vscode.Uri) => {
       StudioPanel.show(context, "twin", uri);
     }),

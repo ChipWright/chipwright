@@ -17,6 +17,7 @@
   "activationEvents": [
     "onView:openhome.devices",
     "onCommand:openhome.newDevice",
+    "onCommand:openhome.openManifest",
     "onCommand:openhome.openDesigner",
     "onCommand:openhome.debugTwin"
   ],
@@ -41,7 +42,7 @@
     "viewsWelcome": [
       {
         "view": "openhome.devices",
-        "contents": "No devices yet.\n\nCreate one from a template, or start from scratch.\n[Create device](command:openhome.newDevice)\n\nAlready have device.yaml files? Open the folder that contains them, then refresh.\n[Open Folder](command:vscode.openFolder)"
+        "contents": "No devices found here.\n\nCreate one from a template, or start from scratch.\n[Create device](command:openhome.newDevice)\n\nAlready have a manifest? Pick the file directly.\n[Open a device manifest](command:openhome.openManifest)\n\nTo list every device.yaml in a project, open its folder, then refresh.\n[Open project folder](command:vscode.openFolder)"
       }
     ],
     "commands": [
@@ -50,6 +51,12 @@
         "title": "New Device",
         "category": "OpenHome",
         "icon": "$(add)"
+      },
+      {
+        "command": "openhome.openManifest",
+        "title": "Open Device Manifest...",
+        "category": "OpenHome",
+        "icon": "$(go-to-file)"
       },
       {
         "command": "openhome.openDesigner",
