@@ -4,13 +4,23 @@
 // designer and live twin debugger render inside the webview; this host stays a thin bridge.
 
 import * as vscode from "vscode";
-import { generate, validate } from "@openhome/studio-core";
+import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import {
+  generate,
+  spawnTwin,
+  TWIN_SOURCE_DIR,
+  twinBinaryPath,
+  validate,
+} from "@openhome/studio-core";
+import type { TwinFault, TwinHandle } from "@openhome/studio-core";
 
 type Tab = "designer" | "twin";
 
-interface InboundMessage {
-  type: "ready" | "refresh";
-}
+type InboundMessage =
+  | { type: "ready" | "refresh" | "stopTwin" }
+  | { type: "startTwin"; fault: TwinFault; faultAt: number; offset: number };
 
 // A fallback manifest so the panel is useful even before a device.yaml is open. It mirrors
 // the reference thermostat and is only used when no manifest is selected or active.
@@ -33,6 +43,7 @@ export class StudioPanel {
   private static current: StudioPanel | undefined;
   private readonly disposables: vscode.Disposable[] = [];
   private activeUri: vscode.Uri | undefined;
+  private twin: TwinHandle | undefined;
 
   private constructor(
     private readonly panel: vscode.WebviewPanel,
@@ -41,8 +52,17 @@ export class StudioPanel {
     this.panel.webview.html = this.render();
     this.panel.webview.onDidReceiveMessage(
       (message: InboundMessage) => {
-        if (message.type === "ready" || message.type === "refresh") {
-          void this.sendState();
+        switch (message.type) {
+          case "ready":
+          case "refresh":
+            void this.sendState();
+            break;
+          case "startTwin":
+            void this.startTwin(message.fault, message.faultAt, message.offset);
+            break;
+          case "stopTwin":
+            this.stopTwin();
+            break;
         }
       },
       null,
@@ -105,6 +125,67 @@ export class StudioPanel {
     });
   }
 
+  private async startTwin(fault: TwinFault, faultAt: number, offset: number): Promise<void> {
+    this.stopTwin();
+    const binPath = await this.ensureTwinBinary();
+    if (binPath === null) {
+      return;
+    }
+    this.post({ type: "twinStarted" });
+    this.twin = spawnTwin(
+      { binPath, ticks: 60, intervalMs: 250, initial: 21, step: 0.5, fault, faultAt, offset },
+      {
+        onSample: (sample) => {
+          this.post({ type: "sample", value: sample.value, unit: sample.unit });
+        },
+        onExit: () => {
+          this.twin = undefined;
+          this.post({ type: "twinExit" });
+        },
+        onError: (error) => {
+          this.twin = undefined;
+          this.post({ type: "twinError", message: error.message });
+        },
+      },
+    );
+  }
+
+  private stopTwin(): void {
+    if (this.twin !== undefined) {
+      this.twin.stop();
+      this.twin = undefined;
+    }
+  }
+
+  // Resolves the twin binary, building it on demand if it has not been compiled yet, so the
+  // debugger works from a fresh checkout given a C toolchain. Returns null and reports the
+  // reason to the webview when no binary can be produced.
+  private async ensureTwinBinary(): Promise<string | null> {
+    const folder = vscode.workspace.workspaceFolders?.[0];
+    if (folder === undefined) {
+      this.post({ type: "twinError", message: "Open the OpenHome Studio workspace to run the twin." });
+      return null;
+    }
+    const root = folder.uri.fsPath;
+    const binPath = twinBinaryPath(root);
+    if (existsSync(binPath)) {
+      return binPath;
+    }
+    this.post({ type: "twinStatus", message: "Building the twin binary..." });
+    try {
+      await buildTwin(join(root, TWIN_SOURCE_DIR));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.post({ type: "twinError", message: `Could not build the twin: ${message}` });
+      return null;
+    }
+    if (!existsSync(binPath)) {
+      this.post({ type: "twinError", message: "The twin build produced no binary." });
+      return null;
+    }
+    return binPath;
+  }
+
   private post(message: unknown): void {
     void this.panel.webview.postMessage(message);
   }
@@ -145,12 +226,29 @@ export class StudioPanel {
   }
 
   private dispose(): void {
+    this.stopTwin();
     StudioPanel.current = undefined;
     for (const disposable of this.disposables.splice(0)) {
       disposable.dispose();
     }
     this.panel.dispose();
   }
+}
+
+// Compiles the twin binary by invoking its Makefile. Resolves on a clean build and rejects
+// when make is unavailable or exits non-zero.
+function buildTwin(dir: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const make = spawn("make", ["-C", dir], { stdio: "ignore" });
+    make.on("error", reject);
+    make.on("exit", (code) => {
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(new Error(`make exited with code ${String(code)}`));
+      }
+    });
+  });
 }
 
 function createNonce(): string {

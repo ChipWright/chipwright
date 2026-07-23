@@ -18,6 +18,8 @@ export {
 export {
   twinArgs,
   spawnTwin,
+  twinBinaryPath,
+  TWIN_SOURCE_DIR,
   type TwinFault,
   type TwinOptions,
   type TwinHandlers,

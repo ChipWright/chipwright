@@ -5,9 +5,18 @@
 // the only untested surface is the process spawn itself.
 
 import { spawn } from "node:child_process";
+import { join } from "node:path";
 import { readTelemetry, type TwinSample } from "./telemetry.js";
 
 export type TwinFault = "none" | "stuck" | "fail" | "offset";
+
+// Location of the controllable twin binary relative to the repository root. The shell uses
+// this to find (and build, if missing) the binary it hands to spawnTwin.
+export const TWIN_SOURCE_DIR = join("simulator", "examples", "twin_studio");
+
+export function twinBinaryPath(repoRoot: string): string {
+  return join(repoRoot, TWIN_SOURCE_DIR, "build", "twin_studio");
+}
 
 export interface TwinOptions {
   // Absolute path to the compiled twin_studio binary.

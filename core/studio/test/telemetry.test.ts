@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { Readable } from "node:stream";
 import { test } from "node:test";
 import { parseSampleLine, readTelemetry } from "../src/telemetry.js";
-import { twinArgs } from "../src/twin.js";
+import { twinArgs, twinBinaryPath, TWIN_SOURCE_DIR } from "../src/twin.js";
 
 test("parseSampleLine parses a telemetry sample", () => {
   const sample = parseSampleLine('{"metric":"temperature_sensor","value":22.5,"unit":"celsius"}');
@@ -46,6 +46,12 @@ test("twinArgs emits only the flags that were set", () => {
     "--interval-ms",
     "100",
   ]);
+});
+
+test("twinBinaryPath locates the built twin under the repo root", () => {
+  const path = twinBinaryPath("/repo");
+  assert.ok(path.startsWith(`/repo/${TWIN_SOURCE_DIR}`));
+  assert.ok(path.endsWith("build/twin_studio"));
 });
 
 test("twinArgs includes fault details only for a real fault", () => {
