@@ -1,8 +1,9 @@
 # Cloud Infrastructure
 
-Open-source IoT cloud (branch 8, Phase 4): device registry, telemetry ingest, device
-shadow, and command dispatch. Built on the Node standard library with no runtime
-dependencies.
+Open-source IoT cloud (branches 8 and 9, Phase 4): device registry, telemetry ingest,
+device shadow, command dispatch, device identity, firmware signing, and staged OTA with
+rollback. Built on the Node standard library with no runtime dependencies (real Ed25519
+keys, signatures, and SHA-256 come from `node:crypto`).
 
 ## What works today
 
@@ -12,6 +13,12 @@ dependencies.
   forward samples without translation.
 - Command queue: enqueue commands for a device, drained when the device polls
 - Telemetry ingest that updates the shadow and marks the device online
+- Device identity: a certificate authority issues each device an Ed25519 key pair and a
+  signed certificate binding its id to its public key
+- Firmware signing: signed build manifests over an artifact hash, verified for both
+  integrity and authenticity before a device applies them
+- OTA: a firmware store that only accepts verified signed builds, and a staged rollout
+  campaign that advances in batches and rolls back to the previous version on failure
 - A thin HTTP API over the standard library
 
 ## HTTP API
@@ -35,7 +42,8 @@ PORT=8080 pnpm --filter @openhome/cloud serve
 
 ## Not yet implemented
 
-- OTA service (firmware artifact store, signed staged rollout, rollback) and the security
-  identity service (branch 9), which share this package
+- HTTP endpoints for identity, firmware publishing, and OTA campaigns (currently a
+  library API with tests)
+- Secure boot enforcement on the device side (needs hardware)
 - Durable storage; state is currently in memory
-- Authentication of devices and callers
+- Authentication of the HTTP callers themselves
