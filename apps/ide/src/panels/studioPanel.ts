@@ -29,23 +29,6 @@ type InboundMessage =
   | { type: "createDevice"; form: DeviceForm }
   | { type: "saveForm"; form: DeviceForm };
 
-// A fallback manifest so the panel is useful even before a device.yaml is open. It mirrors
-// the reference thermostat and is only used when no manifest is selected or active.
-const EXAMPLE_MANIFEST = `device:
-  name: smart_thermostat
-  category: thermostat
-capabilities:
-  temperature_sensor:
-    type: sensor
-    unit: celsius
-    range: { min: -20, max: 50 }
-  hvac:
-    type: actuator
-    modes: [heating, cooling, off]
-connectivity:
-  protocols: [matter, thread]
-`;
-
 export class StudioPanel {
   private static current: StudioPanel | undefined;
   private readonly disposables: vscode.Disposable[] = [];
@@ -133,28 +116,33 @@ export class StudioPanel {
     }
   }
 
-  private async manifestText(): Promise<{ yaml: string; source: string }> {
+  // Resolves the manifest to show. hasDevice is false when nothing is selected or open, which
+  // the webview uses to present the creation screen instead of an empty editor. There is no
+  // built-in fallback device, so a fresh panel never prefills a manifest.
+  private async currentManifest(): Promise<{ yaml: string; source: string; hasDevice: boolean }> {
     if (this.activeUri !== undefined) {
       const bytes = await vscode.workspace.fs.readFile(this.activeUri);
       return {
         yaml: new TextDecoder().decode(bytes),
         source: vscode.workspace.asRelativePath(this.activeUri),
+        hasDevice: true,
       };
     }
     const editor = vscode.window.activeTextEditor;
     if (editor !== undefined && /\.ya?ml$/.test(editor.document.fileName)) {
-      return { yaml: editor.document.getText(), source: editor.document.fileName };
+      return { yaml: editor.document.getText(), source: editor.document.fileName, hasDevice: true };
     }
-    return { yaml: EXAMPLE_MANIFEST, source: "built-in example" };
+    return { yaml: "", source: "", hasDevice: false };
   }
 
   // Sends the full designer state: the editable form, the protocol and template catalogs, and
   // the result of compiling the current manifest. Used on load and refresh.
   private async sendInit(): Promise<void> {
-    const { yaml, source } = await this.manifestText();
+    const { yaml, source, hasDevice } = await this.currentManifest();
     this.post({
       type: "init",
       source,
+      hasDevice,
       form: manifestToForm(yaml),
       protocols: DESIGNER_PROTOCOLS,
       templates: DEVICE_TEMPLATES,
@@ -321,7 +309,6 @@ export class StudioPanel {
 <header class="topbar">
   <div class="wordmark"><span class="glyph">${home}</span><b>OpenHome Studio</b></div>
   <div class="context"><span class="sep">/</span><span class="device" id="ctx-device">device</span><span class="pill idle" id="ctx-pill"><span class="dot"></span><span id="ctx-pill-text">...</span></span></div>
-  <button class="btn ghost small" id="new-device"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>New device</button>
   <div class="seg" role="tablist">
     <button role="tab" aria-selected="true" data-tab="designer">Designer</button>
     <button role="tab" aria-selected="false" data-tab="twin">Twin</button>
@@ -363,16 +350,16 @@ export class StudioPanel {
   </div>
 </section>
 
-<div class="modal-scrim" id="wizard" hidden role="dialog" aria-modal="true" aria-label="New device">
-  <div class="modal" id="wiz-modal">
-    <header>
-      <h2>New device</h2>
-      <div class="steps"><span class="s" data-s="1">1 &middot; Template</span><span class="s" data-s="2">2 &middot; Details</span></div>
-      <button class="icon-btn" data-wiz="cancel" title="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
-    </header>
-    <div class="modal-body" id="wiz-body"></div>
-    <footer id="wiz-footer"></footer>
-  </div>
+<div class="wizard-screen" id="wizard" hidden role="dialog" aria-modal="true" aria-label="Create a device">
+  <header>
+    <div class="wordmark"><span class="glyph">${home}</span><b>OpenHome Studio</b></div>
+    <button class="icon-btn" id="wiz-close" data-wiz="cancel" title="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+  </header>
+  <div class="wiz-body"><div class="wiz-inner">
+    <h1 class="wiz-title">Create a device</h1>
+    <p class="wiz-sub">Choose a template to start with, or build from scratch.</p>
+    <div class="gallery" id="gallery"></div>
+  </div></div>
 </div>
 
 <div class="toast" id="toast"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 13 4 4L19 7"/></svg><span id="toast-text"></span></div>

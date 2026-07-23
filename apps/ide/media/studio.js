@@ -8,9 +8,8 @@
   "use strict";
   const vscode = acquireVsCodeApi();
   const $ = (s, r) => (r || document).querySelector(s);
-  const NAME = /^[a-z][a-z0-9_]*$/;
 
-  const state = { form: null, protocols: [], templates: [], source: "" };
+  const state = { form: null, protocols: [], templates: [], source: "", hasDevice: false };
 
   const ICON = {
     trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16M9 7V5h6v2m-8 0 1 13h8l1-13"/></svg>',
@@ -40,7 +39,6 @@
     if (name === "twin") requestAnimationFrame(draw);
   }
   document.querySelectorAll('[role="tab"]').forEach((t) => t.addEventListener("click", () => selectTab(t.dataset.tab)));
-  $("#new-device").addEventListener("click", openWizard);
 
   // ---- Designer inputs ---------------------------------------------------
   const inspector = $("#inspector");
@@ -71,7 +69,7 @@
 
     inspector.innerHTML =
       '<div class="group"><div class="group-head"><h3>Device</h3></div>'
-      + '<div class="field"><label>Name</label><input type="text" spellcheck="false" autocomplete="off" autocapitalize="off" data-bind="name" value="' + esc(f.name) + '" placeholder="lower_snake_case"></div>'
+      + '<div class="field"><label>Name</label><input type="text" spellcheck="false" autocomplete="off" autocapitalize="off" data-bind="name" value="' + esc(f.name) + '"></div>'
       + '<div class="field-row"><div class="field"><label>Category</label><input type="text" spellcheck="false" autocomplete="off" data-bind="category" value="' + esc(f.category) + '"></div>'
       + '<div class="field"><label>Manufacturer</label><input type="text" spellcheck="false" autocomplete="off" data-bind="manufacturer" value="' + esc(f.manufacturer) + '"></div></div></div>'
       + '<div class="group"><div class="group-head"><h3>Capabilities</h3></div>' + caps
@@ -164,76 +162,43 @@
     $("#save-btn").addEventListener("click", () => vscode.postMessage({ type: "saveForm", form: state.form }));
   }
 
-  // ---- Creation wizard ---------------------------------------------------
-  const scrim = $("#wizard"), wizBody = $("#wiz-body"), wizFooter = $("#wiz-footer");
-  const wiz = { form: null };
+  // ---- Creation screen ---------------------------------------------------
+  const wizardScreen = $("#wizard"), gallery = $("#gallery"), wizClose = $("#wiz-close");
 
-  function setStep(n) { document.querySelectorAll(".modal .steps .s").forEach((s) => s.classList.toggle("active", s.dataset.s === String(n))); }
-  function openWizard() { renderGallery(); scrim.hidden = false; }
-  function closeWizard() { scrim.hidden = true; }
-
-  function galleryTiles() {
-    const blank = '<button class="tile" data-tpl="__blank__"><span class="ticon">' + TICON.__blank__ + '</span><h4>No template</h4><p>Start from scratch in the full editor.</p><span class="meta">empty manifest</span></button>';
-    const tiles = state.templates.map((t) => {
-      const meta = t.form.capabilities.map((c) => c.key).join(", ") + " &middot; " + t.form.protocols.join(", ");
-      return '<button class="tile" data-tpl="' + esc(t.id) + '"><span class="ticon">' + (TICON[t.id] || ICON.plus) + '</span><h4>' + esc(t.title) + '</h4><p>' + esc(t.description) + '</p><span class="meta">' + meta + '</span></button>';
-    }).join("");
-    return blank + tiles;
+  function tile(id, icon, title, desc) {
+    return '<button class="tile" data-tpl="' + esc(id) + '"><span class="ticon">' + icon + '</span><h4>' + esc(title) + '</h4><p>' + esc(desc) + '</p></button>';
   }
-
   function renderGallery() {
-    setStep(1);
-    wizBody.innerHTML = '<div class="gallery">' + galleryTiles() + '</div>';
-    wizFooter.innerHTML = '<button class="btn ghost" data-wiz="cancel">Cancel</button>';
+    gallery.innerHTML = tile("__blank__", TICON.__blank__, "No template", "Start from scratch in the full editor.")
+      + state.templates.map((t) => tile(t.id, TICON[t.id] || ICON.plus, t.title, t.description)).join("");
   }
+  function showWizard() { renderGallery(); wizClose.hidden = !state.hasDevice; wizardScreen.hidden = false; }
+  function hideWizard() { wizardScreen.hidden = true; }
+  function closeWizard() { if (state.hasDevice) hideWizard(); }
 
-  function renderDetails(template) {
-    setStep(2);
-    wiz.form = clone(template.form);
-    wizBody.innerHTML = '<p class="based">Based on <b>' + esc(template.title) + '</b></p>'
-      + '<div class="field"><label>Device name</label><input type="text" spellcheck="false" autocomplete="off" autocapitalize="off" id="wz-name" value="' + esc(wiz.form.name) + '" placeholder="lower_snake_case"><small class="hint" id="wz-hint"></small></div>'
-      + '<div class="field-row"><div class="field"><label>Category</label><input type="text" spellcheck="false" autocomplete="off" id="wz-cat" value="' + esc(wiz.form.category) + '"></div>'
-      + '<div class="field"><label>Manufacturer (optional)</label><input type="text" spellcheck="false" autocomplete="off" id="wz-mfr" value="' + esc(wiz.form.manufacturer) + '"></div></div>';
-    wizFooter.innerHTML = '<button class="btn ghost" data-wiz="back">Back</button><button class="btn primary" data-wiz="create">Create device</button>';
-    validateWiz();
-    wizBody.querySelectorAll("input").forEach((i) => i.addEventListener("input", () => {
-      wiz.form.name = $("#wz-name").value; wiz.form.category = $("#wz-cat").value; wiz.form.manufacturer = $("#wz-mfr").value;
-      validateWiz();
-    }));
-    $("#wz-name").focus();
-  }
-
-  function validateWiz() {
-    const valid = NAME.test(wiz.form.name) && wiz.form.category.trim().length > 0;
-    $("#wz-hint").textContent = wiz.form.name && !NAME.test(wiz.form.name) ? "Must be lower_snake_case" : "";
-    const btn = document.querySelector('[data-wiz="create"]');
-    if (btn) btn.disabled = !valid;
-  }
-
+  // Selecting any tile creates the device immediately and opens the editor; templates fill in
+  // their preset, "No template" starts empty.
   function createFromForm(form) {
     state.form = form;
-    closeWizard();
+    state.hasDevice = true;
+    hideWizard();
     renderInspector();
     selectTab("designer");
     vscode.postMessage({ type: "createDevice", form: form });
     toast("Created " + (form.name || "device"));
   }
 
-  $("#wiz-modal").addEventListener("click", (e) => {
-    const tpl = e.target.closest("[data-tpl]"), w = e.target.closest("[data-wiz]");
+  wizardScreen.addEventListener("click", (e) => {
+    const tpl = e.target.closest("[data-tpl]");
     if (tpl) {
       const id = tpl.dataset.tpl;
       if (id === "__blank__") createFromForm(emptyForm());
-      else { const t = state.templates.find((x) => x.id === id); if (t) renderDetails(t); }
-    } else if (w) {
-      const a = w.dataset.wiz;
-      if (a === "cancel") closeWizard();
-      else if (a === "back") renderGallery();
-      else if (a === "create") createFromForm(wiz.form);
+      else { const t = state.templates.find((x) => x.id === id); if (t) createFromForm(clone(t.form)); }
+    } else if (e.target.closest('[data-wiz="cancel"]')) {
+      closeWizard();
     }
   });
-  scrim.addEventListener("click", (e) => { if (e.target === scrim) closeWizard(); });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !scrim.hidden) closeWizard(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !wizardScreen.hidden) closeWizard(); });
 
   // ---- Twin --------------------------------------------------------------
   const twin = { running: false, samples: [], tick: 0, timer: null, fault: "none", faultIndex: -1 };
@@ -321,8 +286,10 @@
     const m = event.data;
     switch (m.type) {
       case "init":
-        state.form = m.form; state.protocols = m.protocols; state.templates = m.templates || []; state.source = m.source || "";
-        renderInspector(); renderOutput(m); break;
+        state.form = m.form; state.protocols = m.protocols; state.templates = m.templates || []; state.source = m.source || ""; state.hasDevice = !!m.hasDevice;
+        renderInspector(); renderOutput(m);
+        if (!state.hasDevice) showWizard();
+        break;
       case "update":
         renderOutput(m); break;
       case "saved":
@@ -330,7 +297,7 @@
       case "saveError":
         toast(m.message); break;
       case "openWizard":
-        openWizard(); break;
+        showWizard(); break;
       case "focus":
         selectTab(m.tab); break;
       case "twinStarted":
