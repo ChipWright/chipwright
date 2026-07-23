@@ -1,5 +1,7 @@
 # OpenHome Studio
 
+[![CI](https://github.com/Diegoregalado0/openhome-studio/actions/workflows/ci.yml/badge.svg)](https://github.com/Diegoregalado0/openhome-studio/actions/workflows/ci.yml)
+
 An open-source development platform for smart-home and IoT devices — the missing
 abstraction layer that lets a developer build a **device capability** instead of
 chip-specific firmware. The goal: creating a smart device should feel as approachable

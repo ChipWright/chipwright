@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm -r typecheck
+
+      - name: Test device engine
+        run: pnpm -r test
+
+      - name: Build device engine
+        run: pnpm --filter @openhome/device-engine build
+
+      - name: Run firmware unit tests
+        run: make -C sdk/firmware test
+
+      - name: Host compile check of ESP32 BSP
+        run: make -C sdk/firmware hostcheck-esp32
+
+      - name: Build and run reference firmware
+        run: make -C sdk/firmware/examples/thermostat run

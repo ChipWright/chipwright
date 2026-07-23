@@ -12,6 +12,7 @@ typedef enum {
   OH_ERR_INVALID = 1,
   OH_ERR_NOT_FOUND = 2,
   OH_ERR_CAPACITY = 3,
+  OH_ERR_IO = 4,
 } oh_status_t;
 
 typedef enum {
