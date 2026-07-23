@@ -16,17 +16,20 @@ export interface Generator {
 
 export { firmwareInterfaceGenerator } from "./firmware-interface.js";
 export { documentationGenerator } from "./docs.js";
+export { docsSiteGenerator } from "./docs-site.js";
 export { cloudApiGenerator } from "./cloud-api.js";
 export { testStubGenerator } from "./test-stub.js";
 
 import { firmwareInterfaceGenerator } from "./firmware-interface.js";
 import { documentationGenerator } from "./docs.js";
+import { docsSiteGenerator } from "./docs-site.js";
 import { cloudApiGenerator } from "./cloud-api.js";
 import { testStubGenerator } from "./test-stub.js";
 
 export const defaultGenerators: Generator[] = [
   firmwareInterfaceGenerator,
   documentationGenerator,
+  docsSiteGenerator,
   cloudApiGenerator,
   testStubGenerator,
 ];

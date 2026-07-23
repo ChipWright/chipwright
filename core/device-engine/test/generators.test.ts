@@ -78,6 +78,42 @@ test("test-stub generator emits a suite with per-capability assertions", () => {
   assert.match(suite.contents, /set_mode\(target->ctx, "hvac", 2\) == OH_OK\);  \/\/ off/);
 });
 
+test("docs-site generator emits a browsable static site", () => {
+  const files = generate();
+  const base = "docs/site/smart_thermostat";
+
+  const index = files.find((f) => f.path === `${base}/index.html`);
+  assert.ok(index);
+  assert.match(index.contents, /<!DOCTYPE html>/);
+  assert.match(index.contents, /<h1>smart_thermostat<\/h1>/);
+  assert.match(index.contents, /<dt>Capabilities<\/dt><dd>2<\/dd>/);
+  assert.match(index.contents, /<link rel="stylesheet" href="styles.css">/);
+  assert.match(index.contents, /href="capabilities.html"/);
+
+  const caps = files.find((f) => f.path === `${base}/capabilities.html`);
+  assert.ok(caps);
+  assert.match(caps.contents, /<code>temperature_sensor<\/code>/);
+  assert.match(caps.contents, /chip-actuator">actuator/);
+  assert.match(caps.contents, /heating, cooling, off/);
+
+  const telemetry = files.find((f) => f.path === `${base}/telemetry.html`);
+  assert.ok(telemetry);
+  assert.match(telemetry.contents, /&quot;metric&quot;: &quot;temperature_sensor&quot;/);
+  assert.match(telemetry.contents, /&quot;unit&quot;: &quot;celsius&quot;/);
+
+  const styles = files.find((f) => f.path === `${base}/styles.css`);
+  assert.ok(styles);
+  assert.match(styles.contents, /prefers-color-scheme: dark/);
+});
+
+test("docs-site markup escapes and stays self-contained", () => {
+  const files = generate();
+  for (const file of files.filter((f) => f.path.endsWith(".html"))) {
+    assert.doesNotMatch(file.contents, /https?:\/\//, `external URL in ${file.path}`);
+    assert.doesNotMatch(file.contents, /<script/, `script tag in ${file.path}`);
+  }
+});
+
 test("generated artifacts contain no emoji", () => {
   const files = generate();
   const emoji = /\p{Extended_Pictographic}/u;
