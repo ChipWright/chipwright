@@ -87,6 +87,8 @@ signer. The registry refuses to store a malformed package or one whose signature
 verify, and an installer re-checks the signature, re-validates the manifest through the
 device engine, enforces the caller's set of trusted publishers, and rejects any file path
 that would escape the target directory before writing anything. The library backs an
-`openhome` command line (`publish`, `install`, `search`, `info`, `list`) over a
-filesystem registry; a networked registry service is the natural next step, mirroring how
-the cloud package grew an HTTP layer over its in-process core.
+`openhome` command line (`publish`, `install`, `search`, `info`, `list`) over either a
+local filesystem registry or, with `--registry-url`, a networked registry service: a thin
+HTTP layer over the same registry, mirroring how the cloud package grew an HTTP layer over
+its in-process core. Installs re-verify a fetched package exactly as a local one, so trust
+does not depend on transport.

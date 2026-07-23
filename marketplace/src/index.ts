@@ -10,3 +10,6 @@ export * from "./registry.js";
 export * from "./pack.js";
 export * from "./install.js";
 export { FileSystemStore } from "./store.js";
+export { parseSignedPackage } from "./wire.js";
+export { createRegistryServer } from "./http.js";
+export { RegistryClient, RegistryClientError, type NameInfo } from "./client.js";

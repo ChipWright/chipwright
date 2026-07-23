@@ -43,18 +43,14 @@ export function verifyForInstall(signed: SignedPackage, trustedPublishers?: stri
   }
 }
 
-// Resolves a specifier, verifies the package, and writes its files under the target
-// directory. Returns what was installed. Throws InstallError if the specifier does not
-// resolve or the package fails verification, before touching the filesystem.
-export async function installPackage(
-  registry: PackageRegistry,
-  spec: string,
+// Verifies an already-resolved package and writes its files under the target directory.
+// This is the half of installing that does not care where the package came from, so a
+// local registry and a remote one share exactly the same trust and write path. Throws
+// InstallError before touching the filesystem if verification fails.
+export async function writeVerifiedPackage(
+  signed: SignedPackage,
   options: InstallOptions,
 ): Promise<InstallResult> {
-  const signed = registry.resolve(spec);
-  if (signed === undefined) {
-    throw new InstallError(`no package matches "${spec}"`);
-  }
   verifyForInstall(signed, options.trustedPublishers);
 
   const { files } = signed.pkg;
@@ -75,4 +71,18 @@ export async function installPackage(
     publisherPublicKeyPem: signed.publisherPublicKeyPem,
     files: written,
   };
+}
+
+// Resolves a specifier against a registry, verifies the package, and writes its files
+// under the target directory. Throws InstallError if the specifier does not resolve.
+export async function installPackage(
+  registry: PackageRegistry,
+  spec: string,
+  options: InstallOptions,
+): Promise<InstallResult> {
+  const signed = registry.resolve(spec);
+  if (signed === undefined) {
+    throw new InstallError(`no package matches "${spec}"`);
+  }
+  return writeVerifiedPackage(signed, options);
 }

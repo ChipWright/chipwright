@@ -41,15 +41,31 @@ The registry home defaults to `$OPENHOME_REGISTRY` or `~/.openhome`; pass `--reg
 metadata and list the extra files to ship; without one, the manifest alone is packed and
 its metadata is derived from the device.
 
+## Remote registry
+
+The same commands work against a networked registry: pass `--registry-url <url>` (or set
+`$OPENHOME_REGISTRY_URL`) and publish, install, search, and info go over HTTP instead of
+the local directory. Installs re-verify a fetched package exactly as they do a local one,
+so trust does not depend on transport. The server is a thin HTTP layer over the registry:
+
+```
+GET  /packages[?q=]            list or search packages
+GET  /packages/:name           a name's versions and its latest version
+GET  /packages/:name/:version  a signed package (version may be "latest")
+POST /packages                 publish a signed package (rejected unless it verifies)
+```
+
 ## Running
 
 ```sh
 pnpm --filter @openhome/marketplace test
-pnpm --filter @openhome/marketplace cli -- search
+PORT=8080 pnpm --filter @openhome/marketplace serve
+pnpm --filter @openhome/marketplace cli -- search --registry-url http://localhost:8080
 ```
 
 ## Not yet implemented
 
-- A networked registry service (the current registry is a local filesystem directory)
+- Durable, replicated registry storage; the server backs onto a local directory
 - Semantic-version ranges; a specifier is either a bare name (latest) or an exact version
 - Publisher identity beyond a local key file (no key distribution or revocation yet)
+- Authentication of the publishers and installers talking to the server
