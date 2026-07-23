@@ -1,56 +1,357 @@
 # OpenHome Studio
 
 [![CI](https://github.com/Diegoregalado0/openhome-studio/actions/workflows/ci.yml/badge.svg)](https://github.com/Diegoregalado0/openhome-studio/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-An open-source development platform for smart-home and IoT devices — the missing
-abstraction layer that lets a developer build a **device capability** instead of
-chip-specific firmware. The goal: creating a smart device should feel as approachable
-as creating a web application.
+**An open-source development platform for smart-home and IoT devices.**
+You describe a device once, in plain terms — what it senses, what it controls, how it
+connects, how it is powered and secured — and OpenHome Studio generates the firmware
+interface, the cloud API, the tests, and the documentation, runs it as a live digital
+twin, and packages it so others can install it. The goal is simple: **building a smart
+device should feel as approachable as building a web app.**
 
-## Why
+---
 
-Web development collapsed into clean, reasoned layers (App -> Framework -> OS ->
-Hardware). Smart devices did not: firmware, cloud, protocols, mobile apps,
-certification, and manufacturing are all separate concerns a single team must juggle.
-OpenHome Studio inverts that. A single declarative source of truth — the **Device
-Definition Language (DDL)** — becomes the input from which firmware interfaces, cloud
-APIs, tests, documentation, and certification checklists are generated.
+## Table of contents
 
-## Repository layout
+- [The idea](#the-idea)
+- [How it works](#how-it-works)
+- [What's inside](#whats-inside)
+- [Requirements](#requirements)
+- [Quickstart](#quickstart)
+- [Guided tour](#guided-tour)
+  - [1. Describe a device](#1-describe-a-device)
+  - [2. Generate everything from it](#2-generate-everything-from-it)
+  - [3. Run it as a digital twin](#3-run-it-as-a-digital-twin)
+  - [4. Design and debug in the IDE](#4-design-and-debug-in-the-ide)
+  - [5. Operate a fleet with the cloud](#5-operate-a-fleet-with-the-cloud)
+  - [6. Share it through the marketplace](#6-share-it-through-the-marketplace)
+- [Testing](#testing)
+- [Project status](#project-status)
+- [Hardware](#hardware)
+- [Contributing](#contributing)
+- [License](#license)
 
-| Path                  | Purpose                                             | Status      |
-| --------------------- | --------------------------------------------------- | ----------- |
-| `core/device-engine`  | DDL compiler and Hardware Abstraction Layer         | In progress |
-| `core/studio`         | Shell-agnostic IDE core (validate, generate, twin)  | In progress |
-| `sdk/firmware`        | Device SDK and HAL (lifecycle, telemetry, drivers)  | In progress |
-| `simulator`           | Digital-twin engine and fault injection             | In progress |
-| `protocols`           | Matter, Thread, BLE, WiFi, and legacy adapters      | In progress |
-| `cloud`               | Device registry, telemetry, command dispatch, OTA   | In progress |
-| `marketplace`         | Signed device-package registry, publish and install | In progress |
-| `apps/ide`            | Developer IDE, delivered as a VS Code extension      | In progress |
-| `tests`              | Test framework and hardware-in-the-loop harness     | In progress |
-| `docs`                | Documentation generator, roadmap, and RFCs          | Ongoing     |
-| `examples`            | Reference device definitions                         | Ongoing     |
+---
 
-See [docs/ROADMAP.md](docs/ROADMAP.md) for the phased plan.
+## The idea
 
-## Development order
+Web development collapsed into clean, reasoned layers — App on top of Framework on top of
+OS on top of Hardware — and that is largely why building for the web feels fast today.
+Smart devices never got that. A single team still has to juggle firmware, cloud services,
+wireless protocols, mobile apps, security, certification, and manufacturing, each with its
+own tools and its own ways to drift out of sync.
 
-Build one device class end-to-end before widening the platform. The critical path is
-`DDL -> Simulator -> SDK`; nothing meaningful ships before the DDL exists.
+OpenHome Studio inverts the problem. Instead of maintaining seven moving parts by hand,
+you maintain **one** — a declarative description of the device called the **Device
+Definition Language (DDL)** — and everything else is a *generated output* of it. Change
+the device definition and the firmware interface, the cloud contract, the tests, and the
+docs all change with it. They cannot drift, because they were never authored separately.
+
+## How it works
+
+```mermaid
+flowchart LR
+  DDL["device.yaml<br/>(Device Definition Language)"] --> ENGINE{{Device Engine}}
+  ENGINE --> FW["Firmware interface<br/>(C header)"]
+  ENGINE --> API["Cloud API<br/>(OpenAPI)"]
+  ENGINE --> TESTS["Acceptance tests<br/>(target-agnostic C)"]
+  ENGINE --> DOCS["Documentation<br/>(Markdown + static site)"]
+  DDL --> TWIN["Digital twin<br/>(runs the real SDK build)"]
+  TWIN --> IDE["Developer IDE<br/>(design + debug)"]
+  ENGINE --> PKG["Marketplace package<br/>(signed, shareable)"]
+```
+
+The DDL is the single source of truth. The **device engine** compiles it into an
+intermediate representation and runs a set of generators over it. The same definition also
+drives a **digital twin** — a simulated device that runs the actual SDK build with fault
+injection — so you can develop and test the whole system before any hardware exists.
+
+## What's inside
+
+- **Device Definition Language and compiler** — validate a device manifest and generate a
+  firmware interface header, an OpenAPI cloud contract, a target-agnostic acceptance test
+  suite, Markdown docs, and a self-contained static documentation site.
+- **Firmware SDK and Hardware Abstraction Layer** — device lifecycle, telemetry, sensors,
+  actuators, logging, and drivers, with a capability-based HAL that resolves per chip.
+- **Digital twin and simulator** — a virtual device that runs the real SDK build, with
+  sensor, network, and power fault injection, so behavior is verified without a board.
+- **Protocol layer** — simulated Matter commissioning over a deterministic lossy transport
+  that survives packet loss, plus the capability-to-Matter-cluster mapping.
+- **Cloud service** — device registry, telemetry ingest, device shadow, command dispatch,
+  per-device identity and certificates, firmware signing, and staged OTA with rollback.
+- **Developer IDE** — a VS Code extension with a visual device designer and a live twin
+  debugger, built over a shell-agnostic core so it can graduate to a standalone app later.
+- **Marketplace** — signed, shareable device packages with a publish/search/install CLI
+  and a networked registry service. Trust is verified on install, not assumed.
+- **Test framework** — a target-agnostic acceptance runner that runs the same suite on the
+  twin today and on real hardware later, unchanged.
+
+### Repository layout
+
+| Path                 | What it is                                                       |
+| -------------------- | --------------------------------------------------------------- |
+| `core/device-engine` | DDL compiler, intermediate representation, and code generators  |
+| `core/studio`        | Shell-agnostic IDE core: validate, generate, and drive the twin |
+| `sdk/firmware`       | Device SDK and HAL, with a native BSP and an ESP32 target       |
+| `simulator`          | Digital-twin engine and fault injection                         |
+| `protocols`          | Matter commissioning and transport simulation                   |
+| `cloud`              | Registry, telemetry, shadow, commands, identity, signing, OTA   |
+| `marketplace`        | Signed device-package registry, CLI, and HTTP service           |
+| `apps/ide`           | Developer IDE, delivered as a VS Code extension                 |
+| `tests`              | Acceptance test framework and hardware-in-the-loop harness      |
+| `docs`               | Roadmap, architecture notes, and generated documentation        |
+| `examples`           | Reference device definitions (start with `examples/thermostat`) |
+
+The monorepo is a pnpm workspace. TypeScript packages build topologically
+(`device-engine` first, then its consumers); the C components build with `make`.
 
 ## Requirements
 
-- Node.js >= 22
-- pnpm >= 11
+- **Node.js** >= 22
+- **pnpm** >= 11 (`corepack enable` will provide it)
+- **A C toolchain** — `make` and a C11 compiler (`gcc` or `clang`) — for the firmware,
+  simulator, protocol, and twin components. On macOS, install the Xcode Command Line
+  Tools; on Debian/Ubuntu, `build-essential`.
+- **Visual Studio Code** (only if you want to run the developer IDE)
 
-## Getting started
+## Quickstart
 
 ```sh
+git clone https://github.com/Diegoregalado0/openhome-studio.git
+cd openhome-studio
 pnpm install
-pnpm --filter @openhome/device-engine build
-pnpm --filter @openhome/device-engine test
+
+# Build every package (topological), then typecheck and run the test suites.
+pnpm -r build
+pnpm -r typecheck
+pnpm -r test
 ```
+
+That builds and tests the entire TypeScript surface. To also exercise the C components,
+see [Testing](#testing).
+
+## Guided tour
+
+Everything below assumes you have run `pnpm -r build` at least once.
+
+### 1. Describe a device
+
+A device is a single YAML manifest. Here is the reference thermostat
+(`examples/thermostat/device.yaml`), trimmed:
+
+```yaml
+device:
+  name: smart_thermostat
+  manufacturer: example
+  category: thermostat
+
+capabilities:
+  temperature_sensor:
+    type: sensor
+    unit: celsius
+    range: { min: -20, max: 50 }
+  hvac:
+    type: actuator
+    modes: [heating, cooling, off]
+
+connectivity:
+  protocols: [matter, thread, bluetooth]
+
+power:
+  battery:
+    rechargeable: true
+
+security:
+  encryption:
+    enabled: true
+```
+
+Validate it at any time:
+
+```sh
+node core/device-engine/dist/cli.js validate examples/thermostat/device.yaml
+```
+
+### 2. Generate everything from it
+
+```sh
+node core/device-engine/dist/cli.js compile examples/thermostat/device.yaml --out build/generated
+```
+
+From that one manifest you get, under `build/generated`:
+
+```
+firmware/smart_thermostat_interface.h        # firmware interface (C header)
+cloud/smart_thermostat.openapi.json          # cloud API contract (OpenAPI)
+tests/smart_thermostat_generated.c           # target-agnostic acceptance tests
+docs/smart_thermostat.md                     # reference documentation
+docs/site/smart_thermostat/index.html        # self-contained static docs site
+docs/site/smart_thermostat/capabilities.html
+docs/site/smart_thermostat/telemetry.html
+docs/site/smart_thermostat/styles.css
+```
+
+Change the manifest and re-run: every one of these outputs changes with it.
+
+### 3. Run it as a digital twin
+
+The twin runs the actual SDK build as a simulated device and streams telemetry as
+newline-delimited JSON. It accepts fault injection so you can see how the device behaves
+when a sensor sticks, fails, or drifts:
+
+```sh
+make -C simulator/examples/twin_studio
+./simulator/examples/twin_studio/build/twin_studio \
+  --ticks 10 --interval-ms 200 --fault stuck --fault-at 5
+```
+
+You can also run the higher-level demonstrations:
+
+```sh
+make -C sdk/firmware/examples/thermostat run   # reference firmware, logging telemetry
+make -C simulator example                      # twin across fault scenarios
+make -C protocols example                      # Matter commissioning across packet loss
+```
+
+### 4. Design and debug in the IDE
+
+The developer IDE is a VS Code extension: a visual designer that reads and writes the DDL,
+and a live twin debugger with a telemetry chart and fault controls.
+
+```sh
+pnpm -r build
+```
+
+Then, to launch it in an Extension Development Host:
+
+1. Open this repository in VS Code.
+2. Create `.vscode/launch.json` with the following (this file is intentionally not
+   committed, so each contributor points it at their own checkout):
+
+   ```json
+   {
+     "version": "0.2.0",
+     "configurations": [
+       {
+         "name": "Run OpenHome Studio",
+         "type": "extensionHost",
+         "request": "launch",
+         "args": [
+           "--extensionDevelopmentPath=${workspaceFolder}/apps/ide",
+           "${workspaceFolder}"
+         ]
+       }
+     ]
+   }
+   ```
+
+3. Press **F5**. A second VS Code window opens with the extension loaded. Open the
+   **OpenHome Studio** view in the activity bar to see your devices, open the visual
+   designer, and debug a twin. After editing the extension, reload that window to pick up
+   changes.
+
+### 5. Operate a fleet with the cloud
+
+The cloud service is a dependency-free registry, telemetry shadow, command queue, device
+identity authority, firmware signer, and staged OTA controller.
+
+```sh
+PORT=8080 pnpm --filter @openhome/cloud serve
+```
+
+It exposes a small HTTP API (register devices, ingest telemetry, read the shadow, queue
+commands, provision signed identities, publish signed firmware, and drive rollouts). See
+[`cloud/README.md`](cloud/README.md) for the full route list.
+
+### 6. Share it through the marketplace
+
+The marketplace is the App Store for device definitions: a package bundles the DDL
+manifest with its drivers, tests, and docs, is signed by its publisher, and is verified
+again on install. It works against a local registry directory or a networked service.
+
+**Locally:**
+
+```sh
+# Package and publish the thermostat into your local registry (~/.openhome by default).
+mkdir -p /tmp/mydev && cp examples/thermostat/device.yaml /tmp/mydev/
+printf '{"name":"my.thermostat","version":"1.0.0","description":"my thermostat","author":"me","keywords":["hvac"]}\n' \
+  > /tmp/mydev/openhome.package.json
+
+node marketplace/dist/cli.js publish /tmp/mydev
+node marketplace/dist/cli.js search hvac
+node marketplace/dist/cli.js install my.thermostat --dir /tmp/installed
+```
+
+**Over the network** — run a registry service, then point the CLI at it:
+
+```sh
+# Terminal A
+PORT=8080 pnpm --filter @openhome/marketplace serve
+
+# Terminal B
+export OPENHOME_REGISTRY_URL=http://localhost:8080
+node marketplace/dist/cli.js publish /tmp/mydev
+node marketplace/dist/cli.js install my.thermostat --dir /tmp/installed
+```
+
+Installing re-verifies the package's signature and re-validates its manifest before
+writing a single file, so trust never depends on the transport. See
+[`marketplace/README.md`](marketplace/README.md) for details.
+
+## Testing
+
+**TypeScript** (registry, cloud, IDE core, device engine):
+
+```sh
+pnpm -r test
+```
+
+**C components** (firmware, simulator, protocols, and the acceptance suites):
+
+```sh
+make -C sdk/firmware/tests run     # SDK and HAL unit tests
+make -C simulator/tests run        # twin runtime unit tests
+make -C protocols/tests run        # transport and Matter unit tests
+make -C tests test                 # end-to-end acceptance suites (uses the device engine)
+```
+
+Continuous integration runs all of the above on every push and pull request, plus the
+ESP32 BSP host-compile check and the twin smoke test. See
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+
+## Project status
+
+OpenHome Studio is developed one device class (the thermostat) end-to-end before widening,
+so the whole vertical is proven at each step. The critical path is
+`DDL -> Simulator -> SDK`.
+
+| Phase              | Scope                                                    | Status      |
+| ------------------ | ------------------------------------------------------- | ----------- |
+| 1. Foundation      | DDL, HAL, firmware SDK, governance                      | Complete    |
+| 2. Connect         | Matter commissioning, twin, fault and network sim       | Complete    |
+| 3. Verify          | Test framework and hardware-in-the-loop harness         | Complete    |
+| 4. Operate         | Cloud, security, signed and staged OTA with rollback    | Complete    |
+| 5. Author          | Developer IDE and documentation generation              | Complete    |
+| 6. Scale           | Marketplace, AI assistant, manufacturing pipeline       | In progress |
+
+The marketplace (registry, CLI, and networked service) is the first Phase 6 deliverable
+and is in place. The full plan lives in [docs/ROADMAP.md](docs/ROADMAP.md).
+
+## Hardware
+
+The platform is deliberately twin-first: everything above runs and is tested without a
+board. Real-hardware bring-up targets the **ESP32-C6**, and the ESP32 BSP is currently
+verified by host compilation. Running on silicon (and real Matter via connectedhomeip, a
+physical hardware-in-the-loop rack, secure boot, and factory flashing) is tracked for when
+boards are in hand; the same acceptance suite is designed to run there unchanged.
+
+## Contributing
+
+Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) and the
+repository conventions in [CLAUDE.md](CLAUDE.md) before opening a pull request. In short:
+keep changes small and reviewable, add or update tests alongside behavior changes, and run
+`pnpm -r typecheck` and `pnpm -r test` before pushing.
 
 ## License
 
