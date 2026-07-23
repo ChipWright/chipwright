@@ -1,0 +1,81 @@
+{
+  "name": "@openhome/ide",
+  "displayName": "OpenHome Studio",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Developer IDE for OpenHome Studio: visual device designer and live twin debugger, delivered as a VS Code extension over the shell-agnostic studio core",
+  "license": "MIT",
+  "publisher": "openhome",
+  "engines": {
+    "vscode": "^1.90.0",
+    "node": ">=22"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onView:openhome.devices",
+    "onCommand:openhome.openDesigner",
+    "onCommand:openhome.debugTwin"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "openhome",
+          "title": "OpenHome Studio",
+          "icon": "media/activity-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "openhome": [
+        {
+          "id": "openhome.devices",
+          "name": "Devices"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "openhome.openDesigner",
+        "title": "Open Device Designer",
+        "category": "OpenHome"
+      },
+      {
+        "command": "openhome.debugTwin",
+        "title": "Debug Twin",
+        "category": "OpenHome"
+      },
+      {
+        "command": "openhome.refreshDevices",
+        "title": "Refresh Devices",
+        "category": "OpenHome",
+        "icon": "$(refresh)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "openhome.refreshDevices",
+          "when": "view == openhome.devices",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@openhome/studio-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.0",
+    "@types/vscode": "^1.90.0",
+    "esbuild": "^0.23.0",
+    "typescript": "^5.5.0"
+  }
+}

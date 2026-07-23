@@ -1,0 +1,166 @@
+/* Webview styling for the studio panel. It uses VS Code theme variables so the panel reads
+   as part of the editor in any theme, with OpenHome's accent applied to brand and state. */
+
+:root {
+  --oh-accent: #0d8f9c;
+  --oh-ok: var(--vscode-testing-iconPassed, #2ea043);
+  --oh-error: var(--vscode-errorForeground, #f14c4c);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  color: var(--vscode-foreground);
+  background: var(--vscode-editor-background);
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.35));
+  position: sticky;
+  top: 0;
+  background: var(--vscode-editor-background);
+}
+
+.brand {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--oh-accent);
+}
+
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.tab {
+  background: transparent;
+  color: var(--vscode-foreground);
+  border: none;
+  padding: 0.35rem 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.tab:hover {
+  background: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.2));
+}
+
+.tab[aria-current="true"] {
+  opacity: 1;
+  background: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.2));
+  box-shadow: inset 0 -2px 0 var(--oh-accent);
+}
+
+.refresh {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border: none;
+  padding: 0.35rem 0.9rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.refresh:hover {
+  background: var(--vscode-button-hoverBackground);
+}
+
+main {
+  padding: 1rem;
+  display: grid;
+  gap: 1rem;
+  max-width: 52rem;
+}
+
+.panel {
+  border: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.35));
+  border-radius: 6px;
+  padding: 1rem;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+h1 {
+  font-size: 1.3rem;
+  margin: 0;
+}
+
+h2 {
+  font-size: 1rem;
+  margin: 0 0 0.6rem;
+}
+
+.muted {
+  opacity: 0.75;
+}
+
+code {
+  font-family: var(--vscode-editor-font-family, monospace);
+}
+
+.badge {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.badge.ok {
+  color: var(--oh-ok);
+  border: 1px solid var(--oh-ok);
+}
+
+.badge.error {
+  color: var(--oh-error);
+  border: 1px solid var(--oh-error);
+}
+
+.count {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.diagnostics,
+.files {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.diag {
+  padding: 0.35rem 0.5rem;
+  border-radius: 4px;
+  border-left: 3px solid transparent;
+  background: var(--vscode-textBlockQuote-background, rgba(128, 128, 128, 0.1));
+}
+
+.diag.error {
+  border-left-color: var(--oh-error);
+}
+
+.diag.warning {
+  border-left-color: var(--vscode-editorWarning-foreground, #cca700);
+}
+
+.files li {
+  padding: 0.2rem 0;
+}

@@ -25,14 +25,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build TypeScript packages
+        run: pnpm -r build
+
       - name: Typecheck
         run: pnpm -r typecheck
 
-      - name: Test device engine
+      - name: Test TypeScript packages
         run: pnpm -r test
-
-      - name: Build device engine
-        run: pnpm --filter @openhome/device-engine build
 
       - name: Run firmware unit tests
         run: make -C sdk/firmware test
@@ -48,6 +48,11 @@ jobs:
 
       - name: Run the digital-twin demonstration
         run: make -C simulator example
+
+      - name: Build and smoke-test the twin studio binary
+        run: |
+          make -C simulator/examples/twin_studio
+          simulator/examples/twin_studio/build/twin_studio --ticks 3 --interval-ms 0 --fault stuck --fault-at 1
 
       - name: Run protocol layer unit tests
         run: make -C protocols test

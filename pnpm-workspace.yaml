@@ -1,7 +1,8 @@
 packages:
   - "core/*"
   - "cloud"
+  - "apps/*"
   # Additional workspaces join as they gain a package.json:
-  #   sdk/*, apps/*, simulator, protocols, tests
+  #   sdk/*, simulator, protocols, tests
 allowBuilds:
   esbuild: true

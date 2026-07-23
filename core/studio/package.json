@@ -1,0 +1,29 @@
+{
+  "name": "@openhome/studio-core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shell-agnostic core for the OpenHome Studio developer IDE: manifest editing, artifact generation, and live twin control, consumed by the VS Code extension and any future standalone app",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import tsx --test test/*.test.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@openhome/device-engine": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.0",
+    "tsx": "^4.16.0",
+    "typescript": "^5.5.0"
+  }
+}

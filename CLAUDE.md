@@ -12,8 +12,14 @@ The north-star test for any feature: does it make creating a smart device feel m
 like creating a web application? If not, it is low priority.
 
 Read `docs/ROADMAP.md` before starting non-trivial work. The critical path is
-`DDL -> Simulator -> SDK`. Current focus is the Phase 1 MVP: a single device class
-(thermostat) compiling end-to-end.
+`DDL -> Simulator -> SDK`. Phases 1 through 4 are complete for the thermostat device
+class; current focus is Phase 5 (Author): the documentation site generator and the
+developer IDE.
+
+The developer IDE is delivered as a VS Code extension (`apps/ide`) over a shell-agnostic
+core (`core/studio`), so it can graduate into a standalone app later without a rewrite.
+All IDE logic belongs in `core/studio`, which must never import VS Code; the extension is
+a thin adapter. See the Developer IDE architecture section in `docs/ROADMAP.md`.
 
 ## Commit rules
 
