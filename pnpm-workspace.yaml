@@ -1,0 +1,4 @@
+packages:
+  - "core/*"
+  # Additional workspaces join as they gain a package.json:
+  #   sdk/*, apps/*, simulator, protocols, cloud, tests

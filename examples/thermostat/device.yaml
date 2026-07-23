@@ -1,0 +1,35 @@
+# Reference device manifest for the Phase 1 MVP.
+# The Device Definition Language (DDL) treats this file as the single source of truth
+# from which firmware interfaces, cloud APIs, tests, and documentation are generated.
+device:
+  name: smart_thermostat
+  manufacturer: example
+  category: thermostat
+
+capabilities:
+  temperature_sensor:
+    type: sensor
+    unit: celsius
+    range:
+      min: -20
+      max: 50
+  hvac:
+    type: actuator
+    modes:
+      - heating
+      - cooling
+      - off
+
+connectivity:
+  protocols:
+    - matter
+    - thread
+    - bluetooth
+
+power:
+  battery:
+    rechargeable: true
+
+security:
+  encryption:
+    enabled: true
