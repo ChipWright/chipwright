@@ -26,6 +26,7 @@ device should feel as approachable as building a web app.**
   - [4. Design and debug in the IDE](#4-design-and-debug-in-the-ide)
   - [5. Operate a fleet with the cloud](#5-operate-a-fleet-with-the-cloud)
   - [6. Share it through the marketplace](#6-share-it-through-the-marketplace)
+  - [7. Work with the AI assistant](#7-work-with-the-ai-assistant)
 - [Testing](#testing)
 - [Project status](#project-status)
 - [Hardware](#hardware)
@@ -84,6 +85,9 @@ injection — so you can develop and test the whole system before any hardware e
   debugger, built over a shell-agnostic core so it can graduate to a standalone app later.
 - **Marketplace** — signed, shareable device packages with a publish/search/install CLI
   and a networked registry service. Trust is verified on install, not assumed.
+- **AI development assistant** — a provider-agnostic (bring-your-own-key) agent that
+  diagnoses devices and proposes DDL edits, each verified against the real compiler before
+  it is shown. Works with Anthropic, Gemini, and any OpenAI-compatible or local model.
 - **Test framework** — a target-agnostic acceptance runner that runs the same suite on the
   twin today and on real hardware later, unchanged.
 
@@ -93,6 +97,7 @@ injection — so you can develop and test the whole system before any hardware e
 | -------------------- | --------------------------------------------------------------- |
 | `core/device-engine` | DDL compiler, intermediate representation, and code generators  |
 | `core/studio`        | Shell-agnostic IDE core: validate, generate, and drive the twin |
+| `core/assistant`     | Provider-agnostic AI assistant: grounded, tool-using agent      |
 | `sdk/firmware`       | Device SDK and HAL, with a native BSP and an ESP32 target       |
 | `simulator`          | Digital-twin engine and fault injection                         |
 | `protocols`          | Matter commissioning and transport simulation                   |
@@ -298,6 +303,36 @@ node marketplace/dist/cli.js install my.thermostat --dir /tmp/installed
 Installing re-verifies the package's signature and re-validates its manifest before
 writing a single file, so trust never depends on the transport. See
 [`marketplace/README.md`](marketplace/README.md) for details.
+
+### 7. Work with the AI assistant
+
+The assistant is a tool-using agent that diagnoses devices and proposes DDL edits. It is
+provider-agnostic — bring your own API key for Anthropic, Gemini, any OpenAI-compatible
+endpoint, or a local model — and its suggestions are grounded: a proposal is checked
+against the real compiler before you ever see it, and applying it is an explicit step.
+
+```sh
+export OPENHOME_LLM_PROVIDER=anthropic       # or gemini, or openai-compatible
+export OPENHOME_LLM_API_KEY=sk-...
+
+node core/assistant/dist/cli.js ask \
+  "add a humidity sensor and make it battery powered" \
+  --device examples/thermostat/device.yaml
+# review the printed diff, then re-run with --apply to write it
+```
+
+To use a fully local, keyless model, point the OpenAI-compatible provider at it:
+
+```sh
+export OPENHOME_LLM_PROVIDER=openai-compatible
+export OPENHOME_LLM_BASE_URL=http://localhost:11434/v1   # e.g. Ollama
+export OPENHOME_LLM_MODEL=llama3.1
+node core/assistant/dist/cli.js ask "explain what this device does" \
+  --device examples/thermostat/device.yaml
+```
+
+Your prompt and manifest are sent only to the endpoint you configure. See
+[`core/assistant/README.md`](core/assistant/README.md) for details.
 
 ## Testing
 

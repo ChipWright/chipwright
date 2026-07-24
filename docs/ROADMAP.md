@@ -73,9 +73,26 @@ stays a manual demonstration, while the tested logic lives in `core/studio`.
 ## AI Development Assistant (branch 11)
 
 The target architecture is an MCP-style agent with tools over platform surfaces (read
-DDL, run twin, query telemetry, run tests, propose diffs), with generation validated in
-a sandboxed twin before it reaches a developer. This is a Phase 6 concern and is
-intentionally out of scope for the MVP.
+DDL, run twin, query telemetry, run tests, propose diffs), with generation validated
+before it reaches a developer.
+
+The first slice is built in `core/assistant` (`@openhome/assistant`): a shell-agnostic,
+provider-agnostic agent. It is **bring-your-own-key** — a neutral internal model sits
+between the agent loop and three native wire formats (Anthropic Messages, Google Gemini
+`generateContent`, and the OpenAI-compatible Chat Completions format, whose configurable
+base URL also reaches OpenRouter, Groq, DeepSeek, Mistral, and local servers such as Ollama
+and LM Studio). The agent's suggestions are **grounded**: its tools (`read_device`,
+`validate_manifest`, `compile_manifest`, `list_templates`, `propose_device`) run over the
+real DDL compiler through `@openhome/studio-core`, and `propose_device` refuses to record a
+proposal unless the manifest compiles — so a broken suggestion can never surface. Applying a
+change is always human-in-the-loop. The first surface is a CLI (`openhome-assist`); the full
+loop and every provider adapter are tested with a scripted mock provider and a mocked
+`fetch`, so the suite runs in CI with no API keys.
+
+Next for this branch: an in-editor chat panel in the IDE (this core is built to back it),
+a manifest-driven twin as a deeper grounding tool, and running the acceptance suites as a
+tool. Default the Anthropic adapter to a current Claude model and confirm current API
+specifics from the provider docs when revising an adapter.
 
 ## Marketplace (branch 13)
 
