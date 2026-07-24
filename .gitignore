@@ -28,3 +28,7 @@ npm-debug.log*
 # Local-only working docs (kept on disk, not published to the repo)
 /CLAUDE.md
 /docs/ROADMAP.md
+
+# ESP-IDF generated config (the checked-in defaults are sdkconfig.defaults)
+sdkconfig
+sdkconfig.old

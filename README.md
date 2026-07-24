@@ -362,11 +362,21 @@ ESP32 BSP host-compile check and the twin smoke test. See
 
 ## Hardware
 
-The platform is deliberately twin-first: everything above runs and is tested without a
-board. Real-hardware bring-up targets the **ESP32-C6**, and the ESP32 BSP is currently
-verified by host compilation. Running on silicon (and real Matter via connectedhomeip, a
-physical hardware-in-the-loop rack, secure boot, and factory flashing) is tracked for when
-boards are in hand; the same acceptance suite is designed to run there unchanged.
+The platform is twin-first — everything above runs and is tested without a board — but it
+runs on real silicon too. **First light is achieved on the ESP32-C6:** firmware generated
+from the thermostat manifest runs on the chip and streams live temperature telemetry from
+its on-die sensor, over the same `manifest -> generated interface -> SDK + HAL` path the
+digital twin uses. The flashable project is [`sdk/firmware/targets/esp32c6`](sdk/firmware/targets/esp32c6);
+its README covers installing ESP-IDF and building:
+
+```sh
+idf.py -C sdk/firmware/targets/esp32c6 set-target esp32c6 build flash monitor
+```
+
+Still tracked for later: real Matter via connectedhomeip, a physical hardware-in-the-loop
+rack, secure boot, and factory flashing. The on-die sensor reads at ~1&nbsp;°C resolution;
+an external I2C sensor is the path to finer room-temperature readings. The same acceptance
+suite is designed to run on hardware unchanged.
 
 ## Contributing
 

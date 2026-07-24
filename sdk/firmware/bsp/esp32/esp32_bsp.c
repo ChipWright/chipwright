@@ -2,27 +2,25 @@
 
 #include "openhome/hal.h"
 
-#include "esp_adc/adc_oneshot.h"
+#include "driver/temperature_sensor.h"
 #include "esp_log.h"
 
 static const char *TAG = "openhome.esp32";
 
-// ADC unit and channel wired to the temperature sensor on the reference board.
-#define OH_ESP32_TEMP_ADC_UNIT ADC_UNIT_1
-#define OH_ESP32_TEMP_ADC_CHANNEL ADC_CHANNEL_0
-#define OH_ESP32_ADC_MAX_RAW 4095.0f
-
-static adc_oneshot_unit_handle_t g_adc_handle;
+// The ESP32-C6 (and other recent ESP32 parts) has an on-die temperature sensor, so the
+// reference board proves the telemetry path on real silicon with no external sensor wired.
+static temperature_sensor_handle_t g_temp_sensor;
 
 static oh_status_t esp32_temperature_read(void *ctx, float *out_value) {
   (void)ctx;
-  int raw = 0;
-  if (adc_oneshot_read(g_adc_handle, OH_ESP32_TEMP_ADC_CHANNEL, &raw) != ESP_OK) {
+  // The C6 on-die sensor reads in roughly whole-degree steps and is stable between reads,
+  // so its effective resolution here is about 1 C. An external I2C sensor is the path to
+  // finer room-temperature readings (see the hardware plan).
+  float celsius = 0.0f;
+  if (temperature_sensor_get_celsius(g_temp_sensor, &celsius) != ESP_OK) {
     return OH_ERR_IO;
   }
-  // Linear approximation from the 12-bit ADC reading to a -20..80 celsius span. Real
-  // boards calibrate against the sensor datasheet; this is the reference-board mapping.
-  *out_value = (raw / OH_ESP32_ADC_MAX_RAW) * 100.0f - 20.0f;
+  *out_value = celsius;
   return OH_OK;
 }
 
@@ -33,15 +31,11 @@ static oh_status_t esp32_hvac_set_mode(void *ctx, int mode) {
 }
 
 oh_status_t oh_esp32_bsp_register(void) {
-  const adc_oneshot_unit_init_cfg_t init_cfg = {.unit_id = OH_ESP32_TEMP_ADC_UNIT};
-  if (adc_oneshot_new_unit(&init_cfg, &g_adc_handle) != ESP_OK) {
+  const temperature_sensor_config_t config = TEMPERATURE_SENSOR_CONFIG_DEFAULT(-10, 80);
+  if (temperature_sensor_install(&config, &g_temp_sensor) != ESP_OK) {
     return OH_ERR_IO;
   }
-  const adc_oneshot_chan_cfg_t chan_cfg = {
-      .atten = ADC_ATTEN_DB_12,
-      .bitwidth = ADC_BITWIDTH_DEFAULT,
-  };
-  if (adc_oneshot_config_channel(g_adc_handle, OH_ESP32_TEMP_ADC_CHANNEL, &chan_cfg) != ESP_OK) {
+  if (temperature_sensor_enable(g_temp_sensor) != ESP_OK) {
     return OH_ERR_IO;
   }
 
