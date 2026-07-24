@@ -1,0 +1,34 @@
+{
+  "name": "@openhome/assistant",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Provider-agnostic AI development assistant for OpenHome Studio: a grounded, tool-using agent that diagnoses devices and proposes DDL edits, verified against the real compiler before they reach you",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "openhome-assist": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import tsx --test test/*.test.ts",
+    "cli": "tsx src/cli.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@openhome/studio-core": "workspace:*",
+    "yaml": "^2.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.0",
+    "tsx": "^4.16.0",
+    "typescript": "^5.5.0"
+  }
+}
