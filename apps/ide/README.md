@@ -1,8 +1,17 @@
 # Developer IDE
 
 The developer application for OpenHome Studio: a project explorer, a visual device
-designer that emits DDL, and a live twin debugger. It is delivered as a **VS Code
-extension** (branch 10, Phase 5).
+designer that emits DDL, a live twin debugger, and an AI assistant panel. It is delivered
+as a **VS Code extension** (branch 10, Phase 5).
+
+## Panels
+
+- **Designer** and **Twin** — visual DDL editing and live twin debugging, over `core/studio`.
+- **AI Assistant** (`Open AI Assistant` from the Devices view) — a chat panel over
+  `core/assistant`. It is bring-your-own-key (provider and model in settings under
+  `openhome.assistant`; the API key is stored in VS Code secret storage, never in settings
+  or the webview). It proposes DDL edits as a diff, checked against the compiler first, and
+  applies them to the device manifest only when you click Apply, preserving comments.
 
 ## Architecture
 

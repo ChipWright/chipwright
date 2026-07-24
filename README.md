@@ -86,7 +86,8 @@ injection — so you can develop and test the whole system before any hardware e
   and a networked registry service. Trust is verified on install, not assumed.
 - **AI development assistant** — a provider-agnostic (bring-your-own-key) agent that
   diagnoses devices and proposes DDL edits, each verified against the real compiler before
-  it is shown. Works with Anthropic, Gemini, and any OpenAI-compatible or local model.
+  it is shown. Works with Anthropic, Gemini, and any OpenAI-compatible or local model, from
+  the command line or an in-editor chat panel in the IDE.
 - **Test framework** — a target-agnostic acceptance runner that runs the same suite on the
   twin today and on real hardware later, unchanged.
 
@@ -332,6 +333,11 @@ node core/assistant/dist/cli.js ask "explain what this device does" \
 
 Your prompt and manifest are sent only to the endpoint you configure. See
 [`core/assistant/README.md`](core/assistant/README.md) for details.
+
+The same assistant is available inside the IDE: run **Open AI Assistant** from the Devices
+view for a chat panel that shows proposals as a diff and applies them on click. Configure
+the provider and model under the `openhome.assistant` settings; the API key is stored in VS
+Code secret storage.
 
 ## Testing
 
