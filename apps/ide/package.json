@@ -19,7 +19,8 @@
     "onCommand:openhome.newDevice",
     "onCommand:openhome.openManifest",
     "onCommand:openhome.openDesigner",
-    "onCommand:openhome.debugTwin"
+    "onCommand:openhome.debugTwin",
+    "onCommand:openhome.openAssistant"
   ],
   "contributes": {
     "viewsContainers": {
@@ -35,14 +36,14 @@
       "openhome": [
         {
           "id": "openhome.devices",
-          "name": "Devices"
+          "name": ""
         }
       ]
     },
     "viewsWelcome": [
       {
         "view": "openhome.devices",
-        "contents": "No devices found here.\n\nCreate one from a template, or start from scratch.\n[Create device](command:openhome.newDevice)\n\nAlready have a manifest? Pick the file directly.\n[Open a device manifest](command:openhome.openManifest)\n\nTo list every device.yaml in a project, open its folder, then refresh.\n[Open project folder](command:vscode.openFolder)"
+        "contents": "No devices found here.\n\nCreate one from a template, or start from scratch.\n[Create device](command:openhome.newDevice)\n\nAlready have a manifest? Pick the file directly.\n[Open a device manifest](command:openhome.openManifest)"
       }
     ],
     "commands": [
@@ -69,6 +70,12 @@
         "category": "OpenHome"
       },
       {
+        "command": "openhome.openAssistant",
+        "title": "Open Assistant",
+        "category": "OpenHome",
+        "icon": "$(sparkle)"
+      },
+      {
         "command": "openhome.refreshDevices",
         "title": "Refresh Devices",
         "category": "OpenHome",
@@ -83,11 +90,44 @@
           "group": "navigation@1"
         },
         {
-          "command": "openhome.refreshDevices",
+          "command": "openhome.openAssistant",
           "when": "view == openhome.devices",
           "group": "navigation@2"
+        },
+        {
+          "command": "openhome.refreshDevices",
+          "when": "view == openhome.devices",
+          "group": "navigation@3"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "openhome.openAssistant",
+          "when": "view == openhome.devices",
+          "group": "inline"
         }
       ]
+    },
+    "configuration": {
+      "title": "OpenHome Studio",
+      "properties": {
+        "openhome.assistant.provider": {
+          "type": "string",
+          "enum": ["anthropic", "gemini", "openai-compatible"],
+          "default": "anthropic",
+          "description": "LLM provider for the AI assistant. openai-compatible works with OpenAI, OpenRouter, and local servers via a base URL."
+        },
+        "openhome.assistant.model": {
+          "type": "string",
+          "default": "",
+          "description": "Model id to use. Leave blank to use the provider's default."
+        },
+        "openhome.assistant.baseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Base URL for the openai-compatible provider, e.g. http://localhost:11434/v1 for Ollama. The API key is set separately and stored securely."
+        }
+      }
     }
   },
   "scripts": {
@@ -95,6 +135,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@openhome/assistant": "workspace:*",
     "@openhome/studio-core": "workspace:*"
   },
   "devDependencies": {

@@ -39,6 +39,7 @@
     if (name === "twin") requestAnimationFrame(draw);
   }
   document.querySelectorAll('[role="tab"]').forEach((t) => t.addEventListener("click", () => selectTab(t.dataset.tab)));
+  $("#assistant-btn").addEventListener("click", () => vscode.postMessage({ type: "openAssistant" }));
 
   // ---- Designer inputs ---------------------------------------------------
   const inspector = $("#inspector");
@@ -290,7 +291,7 @@
       case "init":
         state.form = m.form; state.protocols = m.protocols; state.templates = m.templates || []; state.source = m.source || ""; state.hasDevice = !!m.hasDevice;
         renderInspector(); renderOutput(m);
-        if (!state.hasDevice) showWizard();
+        if (state.hasDevice) hideWizard(); else showWizard();
         break;
       case "update":
         renderOutput(m); break;

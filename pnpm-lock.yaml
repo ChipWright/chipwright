@@ -10,6 +10,9 @@ importers:
 
   apps/ide:
     dependencies:
+      '@openhome/assistant':
+        specifier: workspace:*
+        version: link:../../core/assistant
       '@openhome/studio-core':
         specifier: workspace:*
         version: link:../../core/studio

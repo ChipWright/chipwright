@@ -23,7 +23,7 @@ import type { DeviceForm, TwinFault, TwinHandle } from "@openhome/studio-core";
 type Tab = "designer" | "twin";
 
 type InboundMessage =
-  | { type: "ready" | "refresh" | "stopTwin" }
+  | { type: "ready" | "refresh" | "stopTwin" | "openAssistant" }
   | { type: "startTwin"; fault: TwinFault; faultAt: number; offset: number }
   | { type: "applyForm"; form: DeviceForm }
   | { type: "createDevice"; form: DeviceForm }
@@ -33,6 +33,13 @@ export class StudioPanel {
   private static current: StudioPanel | undefined;
   private readonly disposables: vscode.Disposable[] = [];
   private activeUri: vscode.Uri | undefined;
+  // A manifest to show in the designer that is not (yet) a file on disk, such as an
+  // assistant proposal. It shadows the file content until the device is saved, so the
+  // proposal is reviewed and edited on the real controls before anything is written.
+  private overrideManifest: { yaml: string; source: string } | undefined;
+  // The device currently in the designer, tracked as the webview edits it, so other parts
+  // of the extension (the assistant) can act on the live, possibly unsaved, device.
+  private currentForm: DeviceForm | undefined;
   private twin: TwinHandle | undefined;
   private pendingWizard = false;
 
@@ -72,6 +79,9 @@ export class StudioPanel {
           case "stopTwin":
             this.stopTwin();
             break;
+          case "openAssistant":
+            void vscode.commands.executeCommand("openhome.openAssistant");
+            break;
         }
       },
       null,
@@ -80,24 +90,60 @@ export class StudioPanel {
     this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
   }
 
-  static show(context: vscode.ExtensionContext, tab: Tab, uri?: vscode.Uri): void {
-    const column = vscode.ViewColumn.Beside;
+  // Creates the panel if needed, or reveals the existing one, without sending any init. The
+  // caller sets state (activeUri, overrideManifest) before triggering the first init, so the
+  // webview never receives a premature "no device" init that would pop the creation wizard.
+  private static ensurePanel(context: vscode.ExtensionContext): StudioPanel {
     if (StudioPanel.current === undefined) {
-      const panel = vscode.window.createWebviewPanel("openhomeStudio", "OpenHome Studio", column, {
+      const panel = vscode.window.createWebviewPanel("openhomeStudio", "OpenHome Studio", vscode.ViewColumn.Beside, {
         enableScripts: true,
         retainContextWhenHidden: true,
         localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, "media")],
       });
       StudioPanel.current = new StudioPanel(panel, context);
     } else {
-      StudioPanel.current.panel.reveal(column);
+      StudioPanel.current.panel.reveal(vscode.ViewColumn.Beside);
     }
+    return StudioPanel.current;
+  }
 
+  static show(context: vscode.ExtensionContext, tab: Tab, uri?: vscode.Uri): void {
+    const panel = StudioPanel.ensurePanel(context);
     if (uri !== undefined) {
-      StudioPanel.current.activeUri = uri;
+      panel.activeUri = uri;
+      panel.overrideManifest = undefined;
     }
-    StudioPanel.current.post({ type: "focus", tab });
-    void StudioPanel.current.sendInit();
+    panel.post({ type: "focus", tab });
+    void panel.sendInit();
+  }
+
+  // Opens the designer showing a manifest that is not yet on disk (an assistant proposal).
+  // The override is set before the first init, so the designer opens directly on the
+  // populated device rather than the creation wizard. When uri is given the proposal edits
+  // that file and Save writes back to it; otherwise Save prompts for a location.
+  static showManifest(context: vscode.ExtensionContext, yaml: string, source: string, uri?: vscode.Uri): void {
+    const panel = StudioPanel.ensurePanel(context);
+    if (uri !== undefined) {
+      panel.activeUri = uri;
+    }
+    panel.overrideManifest = { yaml, source };
+    panel.post({ type: "focus", tab: "designer" });
+    void panel.sendInit();
+  }
+
+  // The device currently open in the designer, as live (possibly unsaved) manifest YAML,
+  // or undefined when no designer is open. This is how the assistant knows which device the
+  // developer is building, even before it has been saved to a file.
+  static liveDevice(): { yaml: string; source: string; uri: vscode.Uri | undefined } | undefined {
+    const panel = StudioPanel.current;
+    if (panel === undefined || panel.currentForm === undefined) {
+      return undefined;
+    }
+    const source =
+      panel.activeUri !== undefined
+        ? vscode.workspace.asRelativePath(panel.activeUri)
+        : (panel.overrideManifest?.source ?? "unsaved device");
+    return { yaml: formToManifest(panel.currentForm), source, uri: panel.activeUri };
   }
 
   // Opens the panel and launches the creation wizard. On a fresh panel the wizard is deferred
@@ -120,6 +166,9 @@ export class StudioPanel {
   // the webview uses to present the creation screen instead of an empty editor. There is no
   // built-in fallback device, so a fresh panel never prefills a manifest.
   private async currentManifest(): Promise<{ yaml: string; source: string; hasDevice: boolean }> {
+    if (this.overrideManifest !== undefined) {
+      return { yaml: this.overrideManifest.yaml, source: this.overrideManifest.source, hasDevice: true };
+    }
     if (this.activeUri !== undefined) {
       const bytes = await vscode.workspace.fs.readFile(this.activeUri);
       return {
@@ -139,11 +188,13 @@ export class StudioPanel {
   // the result of compiling the current manifest. Used on load and refresh.
   private async sendInit(): Promise<void> {
     const { yaml, source, hasDevice } = await this.currentManifest();
+    const form = manifestToForm(yaml);
+    this.currentForm = form;
     this.post({
       type: "init",
       source,
       hasDevice,
-      form: manifestToForm(yaml),
+      form,
       protocols: DESIGNER_PROTOCOLS,
       templates: DEVICE_TEMPLATES,
       ...this.compile(yaml),
@@ -153,6 +204,7 @@ export class StudioPanel {
   // Recompiles from an edited form without touching the form the webview already holds, so
   // typing in the designer stays responsive. The manifest is not written to disk here.
   private applyForm(form: DeviceForm): void {
+    this.currentForm = form;
     this.post({ type: "update", ...this.compile(formToManifest(form)) });
   }
 
@@ -160,6 +212,8 @@ export class StudioPanel {
   // for a location because there is no target file yet.
   private createDevice(form: DeviceForm): void {
     this.activeUri = undefined;
+    this.overrideManifest = undefined;
+    this.currentForm = form;
     this.post({ type: "update", ...this.compile(formToManifest(form)) });
   }
 
@@ -175,8 +229,10 @@ export class StudioPanel {
     const yaml = formToManifest(form);
     await vscode.workspace.fs.writeFile(target, new TextEncoder().encode(yaml));
     this.activeUri = target;
+    this.overrideManifest = undefined;
+    this.currentForm = form;
     this.post({ type: "saved", source: vscode.workspace.asRelativePath(target) });
-    void vscode.commands.executeCommand("openhome.refreshDevices");
+    void vscode.commands.executeCommand("openhome.revealDevice", target);
   }
 
   private async promptSaveTarget(form: DeviceForm): Promise<vscode.Uri | null> {
@@ -313,6 +369,7 @@ export class StudioPanel {
     <button role="tab" aria-selected="true" data-tab="designer">Designer</button>
     <button role="tab" aria-selected="false" data-tab="twin">Twin</button>
   </div>
+  <button class="icon-btn" id="assistant-btn" title="Ask the AI assistant"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 3.5 12.6 8 17 9.6 12.6 11.2 11 15.7 9.4 11.2 5 9.6 9.4 8Z"/><path d="M18 13.5 18.9 16 21.5 16.9 18.9 17.8 18 20.3 17.1 17.8 14.5 16.9 17.1 16Z"/></svg></button>
 </header>
 
 <section class="tabview" id="tab-designer">

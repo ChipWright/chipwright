@@ -5,12 +5,14 @@
 import * as vscode from "vscode";
 import { DeviceTreeProvider } from "./views/deviceTree.js";
 import { StudioPanel } from "./panels/studioPanel.js";
+import { AssistantPanel } from "./panels/assistantPanel.js";
 
 export function activate(context: vscode.ExtensionContext): void {
-  const devices = new DeviceTreeProvider();
+  const devices = new DeviceTreeProvider(context.workspaceState);
+  const devicesView = vscode.window.createTreeView("openhome.devices", { treeDataProvider: devices });
 
   context.subscriptions.push(
-    vscode.window.registerTreeDataProvider("openhome.devices", devices),
+    devicesView,
     vscode.commands.registerCommand("openhome.newDevice", () => {
       StudioPanel.newDevice(context);
     }),
@@ -33,8 +35,22 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("openhome.debugTwin", (uri?: vscode.Uri) => {
       StudioPanel.show(context, "twin", uri);
     }),
+    vscode.commands.registerCommand("openhome.openAssistant", (uri?: vscode.Uri) => {
+      AssistantPanel.show(context, uri);
+    }),
     vscode.commands.registerCommand("openhome.refreshDevices", () => {
       devices.refresh();
+    }),
+    // Called after a device is saved (from the designer or the assistant) so it appears in
+    // the Devices view immediately and is selected, even if its file name is unconventional.
+    vscode.commands.registerCommand("openhome.revealDevice", async (uri: vscode.Uri) => {
+      devices.register(uri);
+      try {
+        const item = await devices.item(uri);
+        await devicesView.reveal(item, { select: true, focus: false });
+      } catch {
+        // Reveal is best-effort; the device is already registered and shown by refresh.
+      }
     }),
   );
 }
