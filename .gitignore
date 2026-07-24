@@ -24,3 +24,7 @@ npm-debug.log*
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Local-only working docs (kept on disk, not published to the repo)
+/CLAUDE.md
+/docs/ROADMAP.md

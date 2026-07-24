@@ -18,8 +18,7 @@ and a standalone application (Electron or Tauri) later.
 
 Keeping this logic out of the shell is what lets the IDE change shells without a rewrite.
 A shell (the VS Code extension, or a future app) only ever calls these functions and
-forwards the results to its UI. See the Developer IDE architecture section in
-[../../docs/ROADMAP.md](../../docs/ROADMAP.md).
+forwards the results to its UI.
 
 ## Development
 

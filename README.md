@@ -28,7 +28,6 @@ device should feel as approachable as building a web app.**
   - [6. Share it through the marketplace](#6-share-it-through-the-marketplace)
   - [7. Work with the AI assistant](#7-work-with-the-ai-assistant)
 - [Testing](#testing)
-- [Project status](#project-status)
 - [Hardware](#hardware)
 - [Contributing](#contributing)
 - [License](#license)
@@ -355,24 +354,6 @@ Continuous integration runs all of the above on every push and pull request, plu
 ESP32 BSP host-compile check and the twin smoke test. See
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
-## Project status
-
-OpenHome Studio is developed one device class (the thermostat) end-to-end before widening,
-so the whole vertical is proven at each step. The critical path is
-`DDL -> Simulator -> SDK`.
-
-| Phase              | Scope                                                    | Status      |
-| ------------------ | ------------------------------------------------------- | ----------- |
-| 1. Foundation      | DDL, HAL, firmware SDK, governance                      | Complete    |
-| 2. Connect         | Matter commissioning, twin, fault and network sim       | Complete    |
-| 3. Verify          | Test framework and hardware-in-the-loop harness         | Complete    |
-| 4. Operate         | Cloud, security, signed and staged OTA with rollback    | Complete    |
-| 5. Author          | Developer IDE and documentation generation              | Complete    |
-| 6. Scale           | Marketplace, AI assistant, manufacturing pipeline       | In progress |
-
-The marketplace (registry, CLI, and networked service) is the first Phase 6 deliverable
-and is in place. The full plan lives in [docs/ROADMAP.md](docs/ROADMAP.md).
-
 ## Hardware
 
 The platform is deliberately twin-first: everything above runs and is tested without a
@@ -383,10 +364,9 @@ boards are in hand; the same acceptance suite is designed to run there unchanged
 
 ## Contributing
 
-Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) and the
-repository conventions in [CLAUDE.md](CLAUDE.md) before opening a pull request. In short:
-keep changes small and reviewable, add or update tests alongside behavior changes, and run
-`pnpm -r typecheck` and `pnpm -r test` before pushing.
+Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a
+pull request. In short: keep changes small and reviewable, add or update tests alongside
+behavior changes, and run `pnpm -r typecheck` and `pnpm -r test` before pushing.
 
 ## License
 

@@ -33,4 +33,4 @@ in CI. The logic that matters is therefore unit tested in `core/studio` instead,
 twin binary spawn is exercised by a manual demonstration, mirroring how the cloud bridge
 is structured. This adapter is kept thin enough to hold no untested logic of its own.
 
-Status: in progress. See [../../docs/ROADMAP.md](../../docs/ROADMAP.md).
+Status: in progress.

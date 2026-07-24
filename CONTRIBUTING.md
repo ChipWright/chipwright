@@ -2,8 +2,8 @@
 
 ## Ground rules
 
-- Build one thing well. Follow the phased plan in [docs/ROADMAP.md](docs/ROADMAP.md)
-  rather than starting work on a later phase.
+- Build one thing well, one device class end-to-end before widening, rather than
+  starting work on a later phase.
 - Keep changes small and reviewable, with tests alongside behavior.
 - Every feature should serve the north-star test: does it make creating a smart
   device feel more like creating a web application?
