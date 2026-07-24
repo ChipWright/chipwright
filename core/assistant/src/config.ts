@@ -18,13 +18,19 @@ export class ConfigError extends Error {}
 
 const PROVIDERS: readonly ProviderName[] = ["anthropic", "gemini", "openai-compatible"];
 
-// Sensible current defaults, all overridable with OPENHOME_LLM_MODEL. These are starting
-// points, not a fixed policy: any model the chosen endpoint serves can be named instead.
+// Sensible current defaults, all overridable. These are starting points, not a fixed
+// policy: any model the chosen endpoint serves can be named instead.
 const DEFAULT_MODELS: Record<ProviderName, string> = {
   anthropic: "claude-sonnet-5",
   gemini: "gemini-2.5-flash",
   "openai-compatible": "gpt-4o",
 };
+
+// The default model for a provider, used when none is configured. Shared by the CLI's
+// environment loader and any other surface (such as the IDE) that builds a config.
+export function defaultModel(provider: ProviderName): string {
+  return DEFAULT_MODELS[provider];
+}
 
 // Reads configuration from the environment. `openai` is accepted as an alias for
 // `openai-compatible`. A missing key is allowed only for a local base URL, since local
@@ -48,7 +54,7 @@ export function loadConfigFromEnv(env: NodeJS.ProcessEnv = process.env): LlmConf
   const config: LlmConfig = {
     provider,
     apiKey,
-    model: env["OPENHOME_LLM_MODEL"] ?? DEFAULT_MODELS[provider],
+    model: env["OPENHOME_LLM_MODEL"] ?? defaultModel(provider),
   };
   if (baseUrl !== undefined) {
     config.baseUrl = baseUrl;
