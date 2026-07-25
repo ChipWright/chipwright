@@ -32,3 +32,8 @@ npm-debug.log*
 # ESP-IDF generated config (the checked-in defaults are sdkconfig.defaults)
 sdkconfig
 sdkconfig.old
+
+# ESP-IDF / esp-matter build and IDE artifacts
+.cache/
+managed_components/
+dependencies.lock
