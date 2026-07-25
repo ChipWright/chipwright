@@ -67,9 +67,6 @@ On Linux, BLE commissioning is more reliable.
 
 ## Known issues
 
-- **`MeasuredValue` reads back `null` over Matter.** The device computes and pushes the on-die
-  temperature every 2 s (visible in the serial log), but `attribute::update()` is not landing
-  the value in the store the read serves — a nullable-attribute encoding detail to resolve.
 - **Consumer ecosystems (Apple Home / Google Home / Alexa) require a hub** (HomePod/Apple TV,
   Nest hub, or a Matter-capable Echo). Apple additionally requires the developer profile above
   to accept this test-certificate device. chip-tool needs no hub.
@@ -81,3 +78,9 @@ On Linux, BLE commissioning is more reliable.
 - Built by the ESP-IDF/esp-matter toolchain, not the repository's `make`/`pnpm` CI.
 - `CONFIG_ENABLE_CONCURRENT_CONNECTION=n` in `sdkconfig.defaults` selects non-concurrent
   commissioning (BLE torn down before the Wi-Fi join).
+- `MeasuredValue` is set through the code-driven `TemperatureMeasurementCluster` obtained from
+  the data model provider registry, not `attribute::update()`. In esp-matter's new data model,
+  reads of this cluster are served from the cluster's own storage; `attribute::update()` writes
+  only the legacy attribute store and its value would never reach a controller. esp-matter
+  ships a `SetMeasuredValue` helper for the pressure/humidity/flow clusters but not for
+  temperature, so this app reaches the cluster through the registry directly.

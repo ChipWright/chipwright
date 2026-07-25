@@ -10,6 +10,10 @@
 
 #include <esp_matter.h>
 
+#include <app/ConcreteClusterPath.h>
+#include <app/clusters/temperature-measurement-server/TemperatureMeasurementCluster.h>
+#include <data_model_provider/esp_matter_data_model_provider.h>
+
 #include <freertos/FreeRTOS.h>
 #include <freertos/timers.h>
 
@@ -38,10 +42,23 @@ static void report_temperature(TimerHandle_t /*timer*/) {
   }
   const int16_t measured = static_cast<int16_t>(celsius * 100.0f);
   chip::DeviceLayer::SystemLayer().ScheduleLambda([measured]() {
-    // MeasuredValue is a nullable int16; construct a non-null value for the update.
-    esp_matter_attr_val_t val = esp_matter_nullable_int16(nullable<int16_t>(measured));
-    attribute::update(s_temperature_endpoint_id, TemperatureMeasurement::Id,
-                      TemperatureMeasurement::Attributes::MeasuredValue::Id, &val);
+    // TemperatureMeasurement is a code-driven cluster: reads are served from the cluster's
+    // own storage via the data model provider registry, not from the legacy esp-matter
+    // attribute store that attribute::update() writes. Set the value through the cluster so
+    // it lands where controllers read it. (esp-matter ships this SetMeasuredValue helper for
+    // pressure/humidity/flow but not temperature, so reach the cluster through the registry.)
+    using chip::app::Clusters::TemperatureMeasurementCluster;
+    chip::app::ConcreteClusterPath path(s_temperature_endpoint_id, TemperatureMeasurement::Id);
+    chip::app::ServerClusterInterface *iface =
+        esp_matter::data_model::provider::get_instance().registry().Get(path);
+    if (iface == nullptr) {
+      return;
+    }
+    auto *cluster = static_cast<TemperatureMeasurementCluster *>(iface);
+    CHIP_ERROR err = cluster->SetMeasuredValue(chip::app::DataModel::Nullable<int16_t>(measured));
+    if (err != CHIP_NO_ERROR) {
+      ESP_LOGW(TAG, "failed to set measured value: %" CHIP_ERROR_FORMAT, err.Format());
+    }
   });
 }
 
