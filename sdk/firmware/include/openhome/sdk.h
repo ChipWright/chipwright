@@ -51,4 +51,11 @@ oh_status_t oh_device_init(const oh_device_t *device);
 // and emits a telemetry sample for it.
 oh_status_t oh_device_run(const oh_device_t *device, unsigned ticks);
 
+// Applies one inbound command line of the form "command key=<key> mode=<int>". A recognized
+// command drives the actuator through the HAL and, on success, emits an acknowledgment line
+// "actuator key=<key> mode=<int>" so a host (or the HIL test backend) can confirm the applied
+// state. Returns OH_OK when a command was parsed and applied, OH_ERR_INVALID for a malformed
+// line, or the HAL status when the actuator is unknown or rejects the mode.
+oh_status_t oh_command_apply(const char *line);
+
 #endif  // OPENHOME_SDK_H

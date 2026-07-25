@@ -6,11 +6,12 @@ idf_component_register(
     "app_main.c"
     "../../../src/hal.c"
     "../../../src/sdk.c"
+    "../../../src/command.c"
     "../../../src/log.c"
     "../../../bsp/esp32/esp32_bsp.c"
   INCLUDE_DIRS
     "."
     "../../../include"
     "../../../bsp/esp32"
-  REQUIRES driver
+  REQUIRES driver esp_driver_usb_serial_jtag
 )

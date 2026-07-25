@@ -162,6 +162,37 @@ static void test_twin_networked_lossy_uplink(void) {
   CHECK(network.telemetry_uplinked + network.telemetry_dropped == capture.count);
 }
 
+// Records the mode applied to a fake actuator, so command parsing can be verified without a
+// physical driver.
+static int g_command_mode = -777;
+
+static oh_status_t command_actuator_set(void *ctx, int mode) {
+  (void)ctx;
+  g_command_mode = mode;
+  return OH_OK;
+}
+
+static void test_command_apply(void) {
+  oh_hal_reset();
+  const oh_actuator_driver_t hvac = {.set_mode = command_actuator_set, .ctx = NULL};
+  oh_hal_register_actuator("hvac", hvac);
+
+  CHECK(oh_command_apply("command key=hvac mode=1") == OH_OK);
+  CHECK(g_command_mode == 1);
+  CHECK(oh_command_apply("command key=hvac mode=0") == OH_OK);
+  CHECK(g_command_mode == 0);
+
+  // An unknown actuator reports not-found; the fake driver is left untouched.
+  CHECK(oh_command_apply("command key=no_such_actuator mode=1") == OH_ERR_NOT_FOUND);
+  CHECK(g_command_mode == 0);
+
+  // Malformed and null lines are rejected without touching the actuator.
+  CHECK(oh_command_apply("telemetry metric=temperature_sensor value=21") == OH_ERR_INVALID);
+  CHECK(oh_command_apply("garbage") == OH_ERR_INVALID);
+  CHECK(oh_command_apply(NULL) == OH_ERR_INVALID);
+  CHECK(g_command_mode == 0);
+}
+
 int main(void) {
   test_source_advances();
   test_fault_none_passthrough();
@@ -173,6 +204,7 @@ int main(void) {
   test_twin_commission_survives_loss();
   test_twin_networked_lossless_uplink();
   test_twin_networked_lossy_uplink();
+  test_command_apply();
 
   fprintf(stdout, "%d checks, %d failure(s)\n", g_checks, g_failures);
   return g_failures == 0 ? 0 : 1;

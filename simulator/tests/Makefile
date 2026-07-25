@@ -13,6 +13,7 @@ SRCS := test_sim.c \
 	$(PROTO)/src/matter.c \
 	$(SDK)/src/hal.c \
 	$(SDK)/src/sdk.c \
+	$(SDK)/src/command.c \
 	$(SDK)/src/log.c
 BIN := build/test_sim
 

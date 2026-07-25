@@ -20,7 +20,7 @@ hardware later, so the same assertions gate both.
 - `include/openhome/test.h` — assertion API and the device target interface
 - `src/assert.c` — suite runner
 - `src/target_twin.c` — twin-backed target
-- `src/target_hil.c` — hardware-in-the-loop target (stub, see below)
+- `src/target_hil.c` — hardware-in-the-loop target (drives a real board over serial)
 - `suites/thermostat/` — functional acceptance suite (runs against every target)
 - `suites/connectivity/` — commissioning under packet loss
 - `suites/reliability/` — soak loop over many lossy commissioning cycles
@@ -29,13 +29,25 @@ hardware later, so the same assertions gate both.
 
 ## Running
 
+Against the twin only (the default; CI runs this, no hardware required):
+
 ```sh
 make -C tests test
 ```
 
+Against a real board as well, over its serial console:
+
+```sh
+OPENHOME_HIL_PORT=/dev/cu.usbmodemXXXX make -C tests test
+```
+
+The hardware-in-the-loop target reads the board's telemetry stream to satisfy `read_sensor`
+and writes `command key=<key> mode=<mode>` lines (confirmed by the firmware's `actuator ...`
+acknowledgment) to satisfy `set_mode`, so the same suites gate the twin and physical silicon
+unchanged. Without `OPENHOME_HIL_PORT` the target reports itself unavailable and is skipped.
+
 ## Not yet implemented
 
-The hardware-in-the-loop target (branch 6) is a stub that reports itself unavailable. It
-depends on a physical test rack: a board farm, flashing agents, and instruments (relays,
-power, logic analyzer). When that exists, `target_hil.c` binds to the rack controller and
-the existing suites run on real hardware without change.
+A full physical test rack — a board farm, flashing agents, and instruments (relays, power,
+logic analyzer) — is future work. The single-board serial HIL above covers sensor reads and
+actuator control; a rack extends it to many boards and electrical measurement.

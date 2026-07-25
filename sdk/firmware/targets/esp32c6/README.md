@@ -35,6 +35,30 @@ try the other. Exit the monitor with `Ctrl-]`.
 You should see the device initialize and stream temperature telemetry once per second,
 read from the chip's on-die sensor.
 
+## Actuator commands
+
+The firmware accepts inbound commands on the same USB-Serial-JTAG console it streams
+telemetry on. Send a line of the form:
+
+```
+command key=hvac mode=1
+```
+
+The HVAC actuator drives **GPIO10** (asserted for any non-off mode, deasserted for off) and
+the firmware echoes an acknowledgment so the sender can confirm the applied state:
+
+```
+actuator key=hvac mode=1
+```
+
+This is the channel the hardware-in-the-loop acceptance backend (`tests/src/target_hil.c`)
+uses to drive and verify actuators, so the same suites that run on the twin also exercise
+actuator control on real silicon. Run them against the board with:
+
+```sh
+OPENHOME_HIL_PORT=/dev/cu.usbmodemXXXX tests/suites/thermostat/build/thermostat_suite
+```
+
 ## Notes
 
 - `main/smart_thermostat_interface.h` is generated from `examples/thermostat/device.yaml`.
