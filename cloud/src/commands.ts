@@ -34,4 +34,21 @@ export class CommandQueue {
     this.byDevice.set(deviceId, []);
     return queue;
   }
+
+  // Serializes every device's queued commands for persistence.
+  snapshot(): Record<string, Command[]> {
+    const out: Record<string, Command[]> = {};
+    for (const [deviceId, queue] of this.byDevice) {
+      out[deviceId] = [...queue];
+    }
+    return out;
+  }
+
+  // Replaces the queue contents from a persisted snapshot.
+  restore(data: Record<string, Command[]>): void {
+    this.byDevice.clear();
+    for (const [deviceId, queue] of Object.entries(data)) {
+      this.byDevice.set(deviceId, [...queue]);
+    }
+  }
 }

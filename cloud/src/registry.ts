@@ -68,4 +68,17 @@ export class DeviceRegistry {
     record.lastSeen = at;
     return true;
   }
+
+  // Serializes every device record for persistence.
+  snapshot(): DeviceRecord[] {
+    return [...this.devices.values()];
+  }
+
+  // Replaces the registry contents from a persisted snapshot.
+  restore(records: readonly DeviceRecord[]): void {
+    this.devices.clear();
+    for (const record of records) {
+      this.devices.set(record.deviceId, { ...record });
+    }
+  }
 }

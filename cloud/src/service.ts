@@ -9,6 +9,7 @@ import { IdentityService, type DeviceCertificate, type DeviceIdentity } from "./
 import { FirmwareStore, RolloutCampaign, type RolloutOptions, type RolloutStatus } from "./ota.js";
 import { DeviceRegistry, type DeviceRecord, type RegisterDeviceInput } from "./registry.js";
 import { DeviceShadow, type Shadow, type TelemetrySample } from "./shadow.js";
+import type { CloudSnapshot, CloudStore } from "./persistence.js";
 import type { SignedBuild } from "./signing.js";
 
 export type Clock = () => number;
@@ -27,12 +28,37 @@ export class CloudService {
   private readonly certificates = new Map<string, DeviceCertificate>();
   private readonly campaigns = new Map<string, RolloutCampaign>();
   private readonly clock: Clock;
+  private readonly store: CloudStore | null;
 
-  constructor(clock: Clock = () => Date.now(), signingPublicKeyPem?: string) {
+  constructor(clock: Clock = () => Date.now(), signingPublicKeyPem?: string, store?: CloudStore) {
     this.clock = clock;
     this.identity = new IdentityService(clock);
     this.firmwareStore =
       signingPublicKeyPem !== undefined ? new FirmwareStore(signingPublicKeyPem) : null;
+    this.store = store ?? null;
+    const persisted = this.store?.load();
+    if (persisted != null) {
+      this.restore(persisted);
+    }
+  }
+
+  // Serializes the core operational state (registry, shadows, command queue) for persistence.
+  snapshot(): CloudSnapshot {
+    return {
+      registry: this.registry.snapshot(),
+      shadow: this.shadow.snapshot(),
+      commands: this.commands.snapshot(),
+    };
+  }
+
+  private restore(snapshot: CloudSnapshot): void {
+    this.registry.restore(snapshot.registry);
+    this.shadow.restore(snapshot.shadow);
+    this.commands.restore(snapshot.commands);
+  }
+
+  private persist(): void {
+    this.store?.save(this.snapshot());
   }
 
   get caPublicKeyPem(): string {
@@ -40,7 +66,9 @@ export class CloudService {
   }
 
   registerDevice(input: RegisterDeviceInput): DeviceRecord {
-    return this.registry.register(input);
+    const record = this.registry.register(input);
+    this.persist();
+    return record;
   }
 
   // Registers a device and issues it a signed identity. The returned identity includes the
@@ -50,6 +78,7 @@ export class CloudService {
     const device = this.registry.register(input);
     const identity = this.identity.issue(input.deviceId);
     this.certificates.set(input.deviceId, identity.certificate);
+    this.persist();
     return { device, identity };
   }
 
@@ -67,6 +96,7 @@ export class CloudService {
     }
     this.registry.markSeen(deviceId, now);
     this.registry.setStatus(deviceId, "online");
+    this.persist();
   }
 
   getShadow(deviceId: string): Shadow | undefined {
@@ -77,11 +107,15 @@ export class CloudService {
     if (this.registry.get(deviceId) === undefined) {
       throw new Error(`unknown device: ${deviceId}`);
     }
-    return this.commands.enqueue(deviceId, name, args, this.clock());
+    const command = this.commands.enqueue(deviceId, name, args, this.clock());
+    this.persist();
+    return command;
   }
 
   drainCommands(deviceId: string): Command[] {
-    return this.commands.drain(deviceId);
+    const drained = this.commands.drain(deviceId);
+    this.persist();
+    return drained;
   }
 
   publishFirmware(build: SignedBuild, artifact: Uint8Array): void {

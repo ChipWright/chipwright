@@ -39,4 +39,29 @@ export class DeviceShadow {
     }
     return shadow;
   }
+
+  // Serializes every device's shadow for persistence.
+  snapshot(): Record<string, Shadow> {
+    const out: Record<string, Shadow> = {};
+    for (const [deviceId, metrics] of this.byDevice) {
+      const shadow: Shadow = {};
+      for (const [metric, entry] of metrics) {
+        shadow[metric] = entry;
+      }
+      out[deviceId] = shadow;
+    }
+    return out;
+  }
+
+  // Replaces the shadow contents from a persisted snapshot.
+  restore(data: Record<string, Shadow>): void {
+    this.byDevice.clear();
+    for (const [deviceId, shadow] of Object.entries(data)) {
+      const metrics = new Map<string, ShadowEntry>();
+      for (const [metric, entry] of Object.entries(shadow)) {
+        metrics.set(metric, entry);
+      }
+      this.byDevice.set(deviceId, metrics);
+    }
+  }
 }
