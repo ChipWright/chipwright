@@ -362,21 +362,32 @@ ESP32 BSP host-compile check and the twin smoke test. See
 
 ## Hardware
 
-The platform is twin-first — everything above runs and is tested without a board — but it
-runs on real silicon too. **First light is achieved on the ESP32-C6:** firmware generated
-from the thermostat manifest runs on the chip and streams live temperature telemetry from
-its on-die sensor, over the same `manifest -> generated interface -> SDK + HAL` path the
-digital twin uses. The flashable project is [`sdk/firmware/targets/esp32c6`](sdk/firmware/targets/esp32c6);
-its README covers installing ESP-IDF and building:
+The platform is twin-first — everything above runs and is tested without a board — but it is
+also proven on real silicon (ESP32-C6):
+
+- **Telemetry firmware** — the manifest-generated firmware runs on the chip and streams live
+  temperature from its on-die sensor, over the same `manifest -> generated interface -> SDK +
+  HAL` path the twin uses. Project: [`sdk/firmware/targets/esp32c6`](sdk/firmware/targets/esp32c6).
+- **Hardware-in-the-loop testing** — the same acceptance suite runs against the twin *and* the
+  physical board over its serial console, unchanged, by setting `OPENHOME_HIL_PORT` (see
+  [`tests`](tests)).
+- **Real Matter** — a Matter-over-Wi-Fi build (connectedhomeip / esp-matter) exposing a
+  Temperature Measurement cluster fed by the on-die sensor. It **commissions onto a Matter
+  fabric** (verified over IP with chip-tool) — the DDL device as a real Matter node. Project
+  and setup: [`sdk/firmware/targets/esp32c6-matter`](sdk/firmware/targets/esp32c6-matter).
 
 ```sh
+# telemetry
 idf.py -C sdk/firmware/targets/esp32c6 set-target esp32c6 build flash monitor
+# HIL: run the acceptance suite against the board
+OPENHOME_HIL_PORT=/dev/tty.usbmodem1401 make -C tests/suites/thermostat run
 ```
 
-Still tracked for later: real Matter via connectedhomeip, a physical hardware-in-the-loop
-rack, secure boot, and factory flashing. The on-die sensor reads at ~1&nbsp;°C resolution;
-an external I2C sensor is the path to finer room-temperature readings. The same acceptance
-suite is designed to run on hardware unchanged.
+Still ahead: reading the Matter temperature value back over the fabric (the device pushes it
+but it currently reports null — a nullable-attribute detail), a physical HIL rack, secure
+boot, and factory flashing. The on-die sensor reads at ~1&nbsp;°C resolution; an external I2C
+sensor is the path to finer room-temperature readings. Consumer ecosystems (Apple/Google/
+Alexa) require a hub and a certified device; chip-tool needs neither.
 
 ## Contributing
 
