@@ -98,7 +98,7 @@ injection — so you can develop and test the whole system before any hardware e
 | `core/device-engine` | DDL compiler, intermediate representation, and code generators  |
 | `core/studio`        | Shell-agnostic IDE core: validate, generate, and drive the twin |
 | `core/assistant`     | Provider-agnostic AI assistant: grounded, tool-using agent      |
-| `sdk/firmware`       | Device SDK and HAL, with a native BSP and an ESP32 target       |
+| `sdk/firmware`       | Device SDK and HAL, native BSP, ESP32-C6 targets (telemetry, Matter, OTA) |
 | `simulator`          | Digital-twin engine and fault injection                         |
 | `protocols`          | Matter commissioning and transport simulation                   |
 | `cloud`              | Registry, telemetry, shadow, commands, identity, signing, OTA   |
@@ -369,25 +369,31 @@ also proven on real silicon (ESP32-C6):
   temperature from its on-die sensor, over the same `manifest -> generated interface -> SDK +
   HAL` path the twin uses. Project: [`sdk/firmware/targets/esp32c6`](sdk/firmware/targets/esp32c6).
 - **Hardware-in-the-loop testing** — the same acceptance suite runs against the twin *and* the
-  physical board over its serial console, unchanged, by setting `OPENHOME_HIL_PORT` (see
-  [`tests`](tests)).
+  physical board over its serial console, unchanged, by setting `OPENHOME_HIL_PORT`. It reads
+  the telemetry stream for sensors and sends commands (confirmed by the firmware) to drive the
+  HVAC actuator on a real GPIO (see [`tests`](tests)).
 - **Real Matter** — a Matter-over-Wi-Fi build (connectedhomeip / esp-matter) exposing a
   Temperature Measurement cluster fed by the on-die sensor. It **commissions onto a Matter
-  fabric** (verified over IP with chip-tool) — the DDL device as a real Matter node. Project
-  and setup: [`sdk/firmware/targets/esp32c6-matter`](sdk/firmware/targets/esp32c6-matter).
+  fabric** and a controller **reads the live temperature back** over the fabric (verified with
+  chip-tool) — the DDL device as a real Matter node. Project and setup:
+  [`sdk/firmware/targets/esp32c6-matter`](sdk/firmware/targets/esp32c6-matter).
+- **Signed over-the-air updates** — the device polls the cloud, downloads the newest build,
+  verifies its SHA-256 and the cloud's Ed25519 signature against a baked-in key, and switches to
+  it; a bad image fails its self-test and the bootloader rolls back. This runs the platform's
+  own signed-build pipeline through to a chip. Project:
+  [`sdk/firmware/targets/esp32c6-ota`](sdk/firmware/targets/esp32c6-ota).
 
 ```sh
 # telemetry
 idf.py -C sdk/firmware/targets/esp32c6 set-target esp32c6 build flash monitor
-# HIL: run the acceptance suite against the board
+# HIL: run the acceptance suite against the board (sensors and actuator)
 OPENHOME_HIL_PORT=/dev/tty.usbmodem1401 make -C tests/suites/thermostat run
 ```
 
-Still ahead: reading the Matter temperature value back over the fabric (the device pushes it
-but it currently reports null — a nullable-attribute detail), a physical HIL rack, secure
-boot, and factory flashing. The on-die sensor reads at ~1&nbsp;°C resolution; an external I2C
-sensor is the path to finer room-temperature readings. Consumer ecosystems (Apple/Google/
-Alexa) require a hub and a certified device; chip-tool needs neither.
+Still ahead: a physical HIL rack (a board farm and electrical instruments), secure boot, and
+factory-provisioned per-device certificates. The on-die sensor reads at ~1&nbsp;°C resolution;
+an external I2C sensor is the path to finer room-temperature readings. Consumer ecosystems
+(Apple/Google/Alexa) require a hub and a certified device; chip-tool needs neither.
 
 ## Contributing
 
