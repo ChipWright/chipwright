@@ -1,0 +1,5 @@
+dependencies:
+  idf: ">=5.1"
+  # Ed25519 verification of the firmware signature. mbedTLS does not implement EdDSA, so the
+  # device uses libsodium's crypto_sign_verify_detached to check the cloud's signature.
+  libsodium: "^1.0.20"

@@ -1,0 +1,20 @@
+CONFIG_IDF_TARGET="esp32c6"
+
+# 8 MB flash on the ESP32-C6-DevKitC-1-N8.
+CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y
+
+# Two-slot OTA partition layout.
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+# App rollback: a freshly written image boots as pending-verify and must call
+# esp_ota_mark_app_valid_cancel_rollback() to become permanent. If it fails its self-test
+# (or crashes before confirming), the bootloader reverts to the previous working image.
+CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y
+
+# Wi-Fi station only.
+CONFIG_ESP_WIFI_SOFTAP_SUPPORT=n
+
+# The OTA agent runs on the main task and calls libsodium's Ed25519 verification, which needs
+# more stack than the default. Size it generously to cover the crypto plus the download buffer.
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=16384

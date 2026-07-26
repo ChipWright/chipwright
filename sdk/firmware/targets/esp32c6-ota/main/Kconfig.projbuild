@@ -1,0 +1,29 @@
+menu "OpenHome OTA"
+
+    config OH_WIFI_SSID
+        string "Wi-Fi SSID"
+        default "changeme"
+        help
+            SSID of the network the device joins to reach the OpenHome cloud.
+
+    config OH_WIFI_PASSWORD
+        string "Wi-Fi password"
+        default "changeme"
+        help
+            Password for the Wi-Fi network.
+
+    config OH_OTA_CLOUD_URL
+        string "OpenHome cloud base URL"
+        default "http://192.168.1.100:8091"
+        help
+            Base URL of the running cloud, e.g. http://<host-ip>:8091. The OTA agent polls
+            <url>/firmware/smart_thermostat/latest and downloads the artifact from there.
+
+    config OH_OTA_SELFTEST_FAIL
+        bool "Force the post-update self-test to fail (rollback demo)"
+        default n
+        help
+            When set, a freshly updated image fails its self-test on first boot so the
+            bootloader rolls back to the previous image. Used to demonstrate safe rollback.
+
+endmenu
