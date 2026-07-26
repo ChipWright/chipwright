@@ -2,7 +2,15 @@
 // devices and the OTA service verify both integrity (the hash matches the bytes) and
 // authenticity (the signature is from the trusted signer) before applying an update.
 
-import { createHash, generateKeyPairSync, sign, verify, type KeyObject } from "node:crypto";
+import {
+  createHash,
+  createPrivateKey,
+  createPublicKey,
+  generateKeyPairSync,
+  sign,
+  verify,
+  type KeyObject,
+} from "node:crypto";
 
 export interface SignedBuild {
   deviceType: string;
@@ -23,10 +31,26 @@ export class FirmwareSigner {
   private readonly privateKey: KeyObject;
   readonly publicKeyPem: string;
 
-  constructor() {
-    const { publicKey, privateKey } = generateKeyPairSync("ed25519");
-    this.privateKey = privateKey;
-    this.publicKeyPem = publicKey.export({ type: "spki", format: "pem" }).toString();
+  // Constructs a signer from an existing Ed25519 private key, or generates a fresh ephemeral
+  // one when none is given. A persistent signing identity (the same key across restarts) is
+  // required for real OTA: the device trusts one baked-in public key, so builds must be signed
+  // by the matching private key every time.
+  constructor(privateKey?: KeyObject) {
+    if (privateKey === undefined) {
+      const generated = generateKeyPairSync("ed25519");
+      this.privateKey = generated.privateKey;
+    } else {
+      this.privateKey = privateKey;
+    }
+    this.publicKeyPem = createPublicKey(this.privateKey).export({ type: "spki", format: "pem" }).toString();
+  }
+
+  static fromPrivateKeyPem(pem: string): FirmwareSigner {
+    return new FirmwareSigner(createPrivateKey(pem));
+  }
+
+  get privateKeyPem(): string {
+    return this.privateKey.export({ type: "pkcs8", format: "pem" }).toString();
   }
 
   sign(deviceType: string, version: string, artifact: Uint8Array): SignedBuild {
@@ -34,6 +58,17 @@ export class FirmwareSigner {
     const signature = sign(null, buildPayload(deviceType, version, artifactSha256), this.privateKey);
     return { deviceType, version, artifactSha256, signature: signature.toString("base64") };
   }
+}
+
+// Extracts the raw 32-byte Ed25519 public key from an SPKI PEM. This is the form a device
+// bakes in and passes to a compact verifier (e.g. libsodium) that expects the raw key rather
+// than a PEM/DER wrapper.
+export function rawEd25519PublicKey(publicKeyPem: string): Uint8Array {
+  const jwk = createPublicKey(publicKeyPem).export({ format: "jwk" });
+  if (jwk.x === undefined) {
+    throw new Error("public key is not an Ed25519 (OKP) key");
+  }
+  return new Uint8Array(Buffer.from(jwk.x, "base64url"));
 }
 
 // Verifies a build against the artifact bytes and the signer's public key. Returns false
