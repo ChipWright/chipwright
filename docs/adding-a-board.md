@@ -1,9 +1,9 @@
 # Adding a board
 
 This guide walks through bringing a new chip to OpenHome Studio by writing a **board support
-package** (BSP). A BSP is the only thing that knows about your silicon. Everything above it —
-the device definition, the generated firmware interface, the SDK, the twin, and the acceptance
-tests — is written against capability traits and does not change per chip.
+package** (BSP). A BSP is the only thing that knows about your silicon. Everything above it (the
+device definition, the generated firmware interface, the SDK, the twin, and the acceptance tests)
+is written against capability traits and does not change per chip.
 
 The firmware tree is Apache-2.0, so your BSP can be shipped and relicensed freely. The worked
 reference is the ESP32-C6 support in [`sdk/firmware/bsp/esp32`](../sdk/firmware/bsp/esp32) and
@@ -87,7 +87,7 @@ make -C sdk/firmware/bsp/<yourchip> hostcheck
 
 A target is the buildable firmware application for your chip: it registers the BSP, initializes
 the device, and runs the SDK loop. Use [`sdk/firmware/targets/esp32c6`](../sdk/firmware/targets/esp32c6)
-as the template — its `app_main` calls `oh_<chip>_bsp_register()`, then `oh_device_init()`, then
+as the template. Its `app_main` calls `oh_<chip>_bsp_register()`, then `oh_device_init()`, then
 `oh_device_run()`. Reference the shared SDK and BSP sources by relative path so the board builds
 from the same code the twin runs. Include the generated `smart_thermostat_interface.h` and
 implement its capability prototypes by delegating to the HAL.
@@ -98,7 +98,7 @@ target for the pattern.
 
 ## 5. Test it
 
-Run the shared acceptance suite against the digital twin first — it must pass with no board:
+Run the shared acceptance suite against the digital twin first; it must pass with no board:
 
 ```sh
 make -C tests test
@@ -115,8 +115,30 @@ The hardware-in-the-loop backend reads the telemetry stream to satisfy sensor re
 commands (confirmed by the firmware) to drive actuators, so the identical assertions gate the
 twin and your silicon.
 
-## 6. Submit
+## 6. Record the evidence
+
+Support is earned from evidence, not asserted. When you run the acceptance suite against your
+board, capture the result as a board conformance record and commit it next to your BSP under
+`sdk/firmware/bsp/<chip>/conformance/`:
+
+```sh
+OPENHOME_HIL_PORT=/dev/tty.<your-port> make -C tests/suites/thermostat run | \
+  pnpm --filter @openhome/conformance board record \
+    --chip <chip> --bsp <bsp> --class thermostat \
+    --commit "$(git rev-parse --short HEAD)" --toolchain <toolchain> --submitter "<you>" \
+    > sdk/firmware/bsp/<chip>/conformance/thermostat-<chip>.json
+```
+
+A passing community record earns the `community-verified` tier; a maintainer marks a reviewed run
+`verified`. See the current support table with:
+
+```sh
+pnpm --filter @openhome/conformance board list sdk/firmware/bsp
+```
+
+## 7. Submit
 
 Open a pull request describing the chip, the wiring, and how you tested it (twin, and HIL if you
-have the board). Contributions to `sdk/firmware/` are accepted under Apache-2.0. Board specifics
-belong inside your BSP and target; do not change shared SDK behavior.
+have the board), and include your conformance record. Contributions to `sdk/firmware/` are
+accepted under Apache-2.0. Board specifics belong inside your BSP and target; do not change shared
+SDK behavior.

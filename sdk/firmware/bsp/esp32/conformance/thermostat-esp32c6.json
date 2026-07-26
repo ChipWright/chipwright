@@ -1,0 +1,15 @@
+{
+  "schema": "openhome-board-conformance/1",
+  "chip": "esp32-c6",
+  "bsp": "esp32",
+  "deviceClass": "thermostat",
+  "suite": "thermostat/hil (hardware)",
+  "checksPassed": 5,
+  "checksTotal": 5,
+  "commit": "c23934c",
+  "toolchain": "esp-idf-5.3.1",
+  "date": "2026-07-26",
+  "submitter": "Diego Regalado",
+  "maintainerVerified": true,
+  "notes": "On-die temperature sensor and HVAC GPIO10 actuator driven over serial HIL."
+}
