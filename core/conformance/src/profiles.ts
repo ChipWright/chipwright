@@ -68,6 +68,27 @@ const thermostatConstraints: DeviceConstraint[] = [
   },
 ];
 
+const smartPlugConstraints: DeviceConstraint[] = [
+  {
+    describe: "the outlet actuator must support 'on' and 'off' modes",
+    check(ir) {
+      const outlet = ir.capabilities.find((c) => c.key === "outlet");
+      if (
+        outlet !== undefined &&
+        outlet.kind === "actuator" &&
+        !(outlet.modes.includes("on") && outlet.modes.includes("off"))
+      ) {
+        return {
+          severity: "error",
+          path: "capabilities.outlet.modes",
+          message: "a smart plug's outlet must support both 'on' and 'off'",
+        };
+      }
+      return null;
+    },
+  },
+];
+
 // The built-in class profiles, keyed by class name (matched against a device's declared category).
 export const PROFILES: Record<string, DeviceProfile> = {
   thermostat: {
@@ -83,6 +104,13 @@ export const PROFILES: Record<string, DeviceProfile> = {
       },
     ],
     constraints: thermostatConstraints,
+  },
+  smart_plug: {
+    class: "smart_plug",
+    matterDeviceType: 0x010a,
+    capabilityClusters: { outlet: 0x0006 },
+    capabilityAttributes: [],
+    constraints: smartPlugConstraints,
   },
 };
 

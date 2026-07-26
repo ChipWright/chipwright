@@ -1,0 +1,27 @@
+# Reference manifest for a second device class, proving the platform generalizes beyond the
+# thermostat. A smart plug switches an outlet on and off. It maps to the Matter On/Off Plug-in
+# Unit device type (0x010A), whose primary application cluster is On/Off.
+#
+# Power measurement is intentionally not included here: under the one-device-type-per-endpoint
+# model it would require the separate Electrical Sensor device type on its own endpoint, which is
+# multi-endpoint composition (future work).
+device:
+  name: smart_plug
+  manufacturer: example
+  category: smart_plug
+
+capabilities:
+  outlet:
+    type: actuator
+    modes:
+      - "on"
+      - "off"
+
+connectivity:
+  protocols:
+    - matter
+    - wifi
+
+security:
+  encryption:
+    enabled: true

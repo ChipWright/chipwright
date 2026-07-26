@@ -100,8 +100,9 @@ signed record so it cannot be self-asserted.
 
 Cluster requirements are derived from the Matter Device Library. A profile still binds a class to
 its device type and declares which capability provides each cluster or fills each attribute, plus
-semantic constraints; currently the thermostat is profiled. A later step adds a grounded
-cross-check against the firmware's generated cluster tables once a Matter cluster generator exists,
-and profiles for more classes as the capability vocabulary grows.
+semantic constraints. The thermostat (Matter Thermostat 0x0301) and the smart plug (On/Off Plug-in
+Unit 0x010A) are profiled today. A later step adds a grounded cross-check against the firmware's
+generated cluster tables once a Matter cluster generator exists, and profiles for more classes as
+the capability vocabulary grows.
 
 This is conformance (interop), not certification (the CSA logo process).

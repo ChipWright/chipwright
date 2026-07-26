@@ -284,7 +284,7 @@ to contribute, as content, without changing the platform.
 | `marketplace` | Signed device-package registry, CLI, and HTTP service | Elastic-2.0 |
 | `apps/ide` | Developer IDE, delivered as a VS Code extension | Elastic-2.0 |
 | `tests` | Acceptance framework and hardware-in-the-loop harness | Elastic-2.0 |
-| `examples` | Reference device definitions (start with `examples/thermostat`) | Elastic-2.0 |
+| `examples` | Reference device definitions (`thermostat`, `smart_plug`) | Elastic-2.0 |
 
 The monorepo is a pnpm workspace. TypeScript packages build in dependency order; the C
 components build with `make`.

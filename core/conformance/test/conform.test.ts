@@ -100,6 +100,41 @@ test("parse errors make a manifest nonconformant", () => {
   assert.equal(report.verdict, "nonconformant");
 });
 
+// A second device class proves the engine and profiles generalize beyond the thermostat.
+function plug(body: string): string {
+  return `device:\n  name: p\n  category: smart_plug\nconnectivity:\n  protocols: [matter]\ncapabilities:\n${body}`;
+}
+const OUTLET = '  outlet:\n    type: actuator\n    modes: ["on", "off"]\n';
+
+test("the reference smart plug is conformant", () => {
+  const path = fileURLToPath(new URL("../../../examples/smart_plug/device.yaml", import.meta.url));
+  const report = conformManifest(readFileSync(path, "utf8"));
+  assert.equal(report.verdict, "conformant");
+  assert.equal(report.matterDeviceType, 0x010a);
+  const onOff = report.clusters.find((c) => c.cluster.id === 0x0006);
+  assert.equal(onOff?.satisfied, true);
+  assert.equal(onOff?.providedBy, "outlet");
+});
+
+test("a smart plug without an outlet is nonconformant", () => {
+  const report = conformManifest(plug('  status_led:\n    type: actuator\n    modes: ["on", "off"]\n'));
+  assert.equal(report.verdict, "nonconformant");
+  assert.ok(report.diagnostics.some((d) => d.severity === "error" && d.message.includes("On/Off")));
+});
+
+test("a smart plug outlet must support on and off", () => {
+  const report = conformManifest(plug('  outlet:\n    type: actuator\n    modes: ["on"]\n'));
+  assert.equal(report.verdict, "nonconformant");
+  assert.ok(report.diagnostics.some((d) => d.message.includes("'on' and 'off'")));
+});
+
+test("the smart plug's mandatory Scenes Management is satisfied by the platform", () => {
+  const report = conformManifest(plug(OUTLET));
+  const scenes = report.clusters.find((c) => c.cluster.id === 0x0062);
+  assert.equal(scenes?.mandatory, true);
+  assert.equal(scenes?.providedBy, "platform");
+});
+
 test("conform() works directly on a parsed IR", () => {
   const { ir } = parseManifest(thermostat(TEMP + HVAC));
   assert.ok(ir);
