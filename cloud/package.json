@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "description": "Device registry, telemetry ingest, device shadow, and command dispatch for OpenHome Studio",
-  "license": "MIT",
+  "license": "Elastic-2.0",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

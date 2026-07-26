@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "private": true,
   "description": "Developer IDE for OpenHome Studio: visual device designer and live twin debugger, delivered as a VS Code extension over the shell-agnostic studio core",
-  "license": "MIT",
+  "license": "Elastic-2.0",
   "publisher": "openhome",
   "engines": {
     "vscode": "^1.90.0",

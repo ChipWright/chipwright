@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "description": "Package registry for OpenHome device definitions: signed packages of DDL, drivers, tests, and metadata, with publish, search, and install",
-  "license": "MIT",
+  "license": "Elastic-2.0",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

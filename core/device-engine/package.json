@@ -2,7 +2,7 @@
   "name": "@openhome/device-engine",
   "version": "0.0.0",
   "description": "Device Definition Language compiler and Hardware Abstraction Layer for OpenHome Studio",
-  "license": "MIT",
+  "license": "Elastic-2.0",
   "type": "module",
   "bin": {
     "openhome": "./dist/cli.js"
