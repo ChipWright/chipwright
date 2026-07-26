@@ -17,7 +17,8 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --import tsx --test test/*.test.ts",
-    "conform": "tsx src/cli.ts"
+    "conform": "tsx src/cli.ts",
+    "generate:device-types": "tsx scripts/generate-matter-device-types.ts"
   },
   "engines": {
     "node": ">=22"

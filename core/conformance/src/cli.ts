@@ -24,6 +24,13 @@ function render(report: ConformanceReport): string {
       lines.push(`  [${status}] ${c.cluster.name} (${formatClusterId(c.cluster.id)})${by}`);
     }
   }
+  if (report.attributes.length > 0) {
+    lines.push("attributes:");
+    for (const a of report.attributes) {
+      const status = a.present ? "ok" : "no source";
+      lines.push(`  [${status}] ${a.cluster.name}.${a.attribute} <- ${a.capabilityKey}`);
+    }
+  }
   if (report.diagnostics.length > 0) {
     lines.push("diagnostics:");
     for (const d of report.diagnostics) {

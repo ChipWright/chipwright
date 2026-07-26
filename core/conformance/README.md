@@ -12,16 +12,34 @@ This is conformance (the interop engineering), not certification (the CSA logo p
 
 Given a device (a manifest or a parsed IR) and a class profile:
 
-- **Required clusters.** Every mandatory Matter cluster for the device type must be provided by
-  some capability. Optional clusters are reported as gaps when absent.
-- **Grounded mapping.** Capabilities are mapped to the Matter clusters the generated device will
-  actually expose, so the check reflects what ships, not just what the manifest claims.
-- **Semantic constraints.** Class-specific rules beyond cluster presence (for a thermostat: the
-  hvac actuator must support an `off` mode; the temperature sensor should declare a range).
+- **Required clusters, from the standard.** The device type's server clusters come from the
+  Matter Device Library (see below), not from hand-authored guesses. Every mandatory application
+  cluster must be provided by a capability; infrastructure clusters (Identify, Groups, Descriptor,
+  Binding) are satisfied by the platform; optional clusters are recorded but not required.
+- **Attribute mapping.** Under the one-device-type-per-endpoint model, a capability can fill an
+  attribute of a cluster rather than adding a cluster. A thermostat's temperature reading maps to
+  the Thermostat cluster's `LocalTemperature` attribute.
+- **Semantic constraints.** Class-specific rules the spec does not encode (for a thermostat: the
+  hvac actuator must support an `off` mode; there should be a local temperature source).
 
 It produces a reproducible `ConformanceReport` with a verdict of `conformant`,
-`conformant_with_gaps` (only optional clusters missing), or `nonconformant`, plus line-anchored
+`conformant_with_gaps` (satisfied but with warnings), or `nonconformant`, plus line-anchored
 diagnostics.
+
+## Where the requirements come from
+
+`src/matter-device-types.generated.ts` is generated from the Matter Device Library (the
+connectedhomeip `data_model` device type XML), so "conformant" tracks what ecosystems actually
+recognize. Regenerate it from a local checkout and commit the result:
+
+```sh
+pnpm --filter @openhome/conformance generate:device-types \
+  ~/esp/esp-matter/connectedhomeip/connectedhomeip/data_model/1.4/device_types 1.4 \
+  > core/conformance/src/matter-device-types.generated.ts
+```
+
+Only server-side clusters are captured (what a device implements). Conditional-mandatory clusters
+are recorded as optional, which is lenient by design and never wrongly fails a device.
 
 ## CLI
 
@@ -55,7 +73,10 @@ const report = conformManifest(yamlSource);       // parse + judge
 
 ## Scope
 
-Profiles in this phase are authored by hand for the classes the platform supports (currently the
-thermostat). A later phase derives them from the Matter Device Library so "conformant" tracks the
-published standard rather than this package's own encoding of it, and adds a cross-check against
-the generated cluster tables.
+Cluster requirements are derived from the Matter Device Library. A profile still binds a class to
+its device type and declares which capability provides each cluster or fills each attribute, plus
+semantic constraints; currently the thermostat is profiled. A later step adds a grounded
+cross-check against the firmware's generated cluster tables once a Matter cluster generator exists,
+and profiles for more classes as the capability vocabulary grows.
+
+This is conformance (interop), not certification (the CSA logo process).

@@ -1,9 +1,13 @@
 import type { DeviceIR, Diagnostic } from "@openhome/device-engine";
-import { CLUSTER_TEMPERATURE_MEASUREMENT, CLUSTER_THERMOSTAT, type MatterCluster } from "./clusters.js";
 
-export interface RequiredCluster {
-  cluster: MatterCluster;
-  mandatory: boolean;
+// A capability that fills an attribute of a device type's cluster rather than providing a whole
+// cluster of its own. Under the one-device-type-per-endpoint model, a thermostat's temperature
+// reading is the Thermostat cluster's LocalTemperature attribute, not a separate cluster.
+export interface CapabilityAttribute {
+  capabilityKey: string;
+  cluster: number;
+  attribute: string;
+  describe: string;
 }
 
 // A semantic check beyond cluster presence: it returns a diagnostic when the rule is violated,
@@ -13,17 +17,15 @@ export interface DeviceConstraint {
   check(ir: DeviceIR): Diagnostic | null;
 }
 
-// A device-class conformance profile. It names the Matter device type the class maps to and the
-// clusters an instance must (or may) provide, plus semantic constraints beyond cluster presence.
-//
-// In this phase the profiles are authored by hand for the classes the platform supports. A later
-// phase derives them from the Matter Device Library so "conformant" tracks the published standard
-// rather than our own encoding of it.
+// A device-class conformance profile. It binds a class to a Matter device type (whose required
+// clusters come from the generated Matter Device Library, not from this file), declares which
+// capability provides each application cluster, maps capabilities that fill cluster attributes,
+// and adds semantic constraints the spec does not encode.
 export interface DeviceProfile {
   class: string;
   matterDeviceType: number;
-  matterDeviceTypeName: string;
-  requires: RequiredCluster[];
+  capabilityClusters: Record<string, number>;
+  capabilityAttributes: CapabilityAttribute[];
   constraints: DeviceConstraint[];
 }
 
@@ -43,10 +45,18 @@ const thermostatConstraints: DeviceConstraint[] = [
     },
   },
   {
-    describe: "the temperature sensor should declare a measurement range",
+    describe: "a thermostat should have a local temperature source",
     check(ir) {
       const temp = ir.capabilities.find((c) => c.key === "temperature_sensor");
-      if (temp !== undefined && temp.kind === "sensor" && temp.range === null) {
+      if (temp === undefined) {
+        return {
+          severity: "warning",
+          path: "capabilities",
+          message:
+            "no temperature_sensor: the Thermostat cluster's LocalTemperature attribute has no source",
+        };
+      }
+      if (temp.kind === "sensor" && temp.range === null) {
         return {
           severity: "warning",
           path: "capabilities.temperature_sensor.range",
@@ -58,15 +68,19 @@ const thermostatConstraints: DeviceConstraint[] = [
   },
 ];
 
-// The built-in class profiles. Keyed by class name (matched against a device's declared category).
+// The built-in class profiles, keyed by class name (matched against a device's declared category).
 export const PROFILES: Record<string, DeviceProfile> = {
   thermostat: {
     class: "thermostat",
     matterDeviceType: 0x0301,
-    matterDeviceTypeName: "Thermostat",
-    requires: [
-      { cluster: CLUSTER_THERMOSTAT, mandatory: true },
-      { cluster: CLUSTER_TEMPERATURE_MEASUREMENT, mandatory: false },
+    capabilityClusters: { hvac: 0x0201 },
+    capabilityAttributes: [
+      {
+        capabilityKey: "temperature_sensor",
+        cluster: 0x0201,
+        attribute: "LocalTemperature",
+        describe: "temperature_sensor reports through the Thermostat cluster's LocalTemperature",
+      },
     ],
     constraints: thermostatConstraints,
   },
