@@ -1,0 +1,33 @@
+{
+  "name": "@openhome/conformance",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Device-class conformance engine: validates a device definition against a class profile and its Matter device type",
+  "license": "Elastic-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "openhome-conform": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import tsx --test test/*.test.ts",
+    "conform": "tsx src/cli.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@openhome/device-engine": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.0",
+    "tsx": "^4.16.0",
+    "typescript": "^5.5.0"
+  }
+}

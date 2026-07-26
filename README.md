@@ -48,6 +48,8 @@ stay in lockstep because they are generated, never authored separately.
   it.
 - **Develop before you have hardware.** Run the device as a digital twin that executes the real
   SDK build, with sensor, network, and power fault injection.
+- **Check conformance.** Verify a device is a valid instance of its class and maps to the right
+  Matter device type, so ecosystems recognize it. `openhome-conform device.yaml`.
 - **Design and debug visually.** A VS Code extension with a device designer and a live twin
   debugger (telemetry chart, fault controls).
 - **Operate a fleet.** A cloud service for device registry, telemetry, device shadow, command
@@ -274,6 +276,7 @@ to contribute, as content, without changing the platform.
 | `core/device-engine` | Definition compiler, IR, and code generators | Elastic-2.0 |
 | `core/studio` | Shell-agnostic IDE core: validate, generate, drive the twin | Elastic-2.0 |
 | `core/assistant` | Provider-agnostic AI assistant | Elastic-2.0 |
+| `core/conformance` | Device-class conformance engine and Matter device-type mapping | Elastic-2.0 |
 | `sdk/firmware` | Device SDK, HAL, native BSP, ESP32-C6 targets (telemetry, Matter, OTA) | **Apache-2.0** |
 | `simulator` | Digital-twin engine and fault injection | Elastic-2.0 |
 | `protocols` | Matter commissioning and transport simulation | Elastic-2.0 |
