@@ -8,6 +8,10 @@
 //   GET  /devices/:id/shadow          fetch the device shadow
 //   POST /devices/:id/commands        queue a command
 //   GET  /devices/:id/commands        drain queued commands
+//   POST /firmware                    publish a signed build
+//   GET  /firmware/:type/latest       fetch the newest signed build for a device type
+//   GET  /firmware/:type/:version     fetch a signed build manifest
+//   GET  /firmware/:type/:version/artifact  download the raw firmware bytes for OTA
 
 import { createServer, type IncomingMessage, type Server } from "node:http";
 import type { RolloutOptions } from "./ota.js";
@@ -19,6 +23,19 @@ import type { SignedBuild } from "./signing.js";
 interface JsonResponse {
   status: number;
   body: unknown;
+}
+
+// A raw binary response, used to serve firmware artifact bytes for OTA downloads.
+interface BinaryResponse {
+  status: number;
+  contentType: string;
+  bytes: Uint8Array;
+}
+
+type Response = JsonResponse | BinaryResponse;
+
+function isBinaryResponse(response: Response): response is BinaryResponse {
+  return "bytes" in response;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -151,7 +168,7 @@ async function routeFirmware(
   service: CloudService,
   req: IncomingMessage,
   parts: string[],
-): Promise<JsonResponse> {
+): Promise<Response> {
   if (parts.length === 1 && req.method === "POST") {
     const body = await readJson(req);
     const rawBuild = isRecord(body) ? body["build"] : undefined;
@@ -180,9 +197,19 @@ async function routeFirmware(
     }
   }
   if (parts.length === 3 && req.method === "GET") {
-    const build = service.getFirmware(parts[1] as string, parts[2] as string);
+    const deviceType = parts[1] as string;
+    const build =
+      parts[2] === "latest"
+        ? service.latestFirmware(deviceType)
+        : service.getFirmware(deviceType, parts[2] as string);
     return build !== undefined
       ? { status: 200, body: build }
+      : { status: 404, body: { error: "no such firmware" } };
+  }
+  if (parts.length === 4 && parts[3] === "artifact" && req.method === "GET") {
+    const artifact = service.getFirmwareArtifact(parts[1] as string, parts[2] as string);
+    return artifact !== undefined
+      ? { status: 200, contentType: "application/octet-stream", bytes: artifact }
       : { status: 404, body: { error: "no such firmware" } };
   }
   return { status: 404, body: { error: "unknown route" } };
@@ -244,7 +271,7 @@ async function routeRollouts(
   return { status: 404, body: { error: "unknown route" } };
 }
 
-async function route(service: CloudService, req: IncomingMessage): Promise<JsonResponse> {
+async function route(service: CloudService, req: IncomingMessage): Promise<Response> {
   const url = new URL(req.url ?? "/", "http://localhost");
   const parts = url.pathname.split("/").filter((part) => part.length > 0);
 
@@ -273,6 +300,11 @@ export function createCloudServer(service: CloudService): Server {
   return createServer((req, res) => {
     route(service, req)
       .then((result) => {
+        if (isBinaryResponse(result)) {
+          res.writeHead(result.status, { "content-type": result.contentType });
+          res.end(Buffer.from(result.bytes));
+          return;
+        }
         res.writeHead(result.status, { "content-type": "application/json" });
         res.end(JSON.stringify(result.body ?? null));
       })

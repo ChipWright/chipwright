@@ -129,6 +129,14 @@ export class CloudService {
     return this.firmwareStore?.get(deviceType, version);
   }
 
+  getFirmwareArtifact(deviceType: string, version: string): Uint8Array | undefined {
+    return this.firmwareStore?.getArtifact(deviceType, version);
+  }
+
+  latestFirmware(deviceType: string): SignedBuild | undefined {
+    return this.firmwareStore?.latest(deviceType);
+  }
+
   createRollout(
     deviceIds: readonly string[],
     targetVersion: string,

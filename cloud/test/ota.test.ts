@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { CloudService } from "../src/service.js";
-import { FirmwareStore, RolloutCampaign } from "../src/ota.js";
+import { FirmwareStore, RolloutCampaign, compareVersions } from "../src/ota.js";
 import { FirmwareSigner } from "../src/signing.js";
 
 const artifact = new TextEncoder().encode("thermostat firmware 1.1.0");
@@ -16,6 +16,39 @@ test("firmware store accepts signed builds and rejects tampered ones", () => {
 
   const tampered = new TextEncoder().encode("thermostat firmware 1.1.0 tampered");
   assert.throws(() => store.publish(build, tampered));
+});
+
+test("firmware store retains artifact bytes for download", () => {
+  const signer = new FirmwareSigner();
+  const store = new FirmwareStore(signer.publicKeyPem);
+  const build = signer.sign("thermostat", "1.1.0", artifact);
+
+  store.publish(build, artifact);
+  assert.deepEqual(store.getArtifact("thermostat", "1.1.0"), artifact);
+  assert.equal(store.getArtifact("thermostat", "9.9.9"), undefined);
+});
+
+test("firmware store reports the newest published version per device type", () => {
+  const signer = new FirmwareSigner();
+  const store = new FirmwareStore(signer.publicKeyPem);
+  const a = new TextEncoder().encode("a");
+  const b = new TextEncoder().encode("b");
+  const c = new TextEncoder().encode("c");
+
+  store.publish(signer.sign("thermostat", "1.9.0", a), a);
+  store.publish(signer.sign("thermostat", "1.10.0", b), b);
+  store.publish(signer.sign("sensor", "2.0.0", c), c);
+
+  assert.equal(store.latest("thermostat")?.version, "1.10.0");
+  assert.equal(store.latest("sensor")?.version, "2.0.0");
+  assert.equal(store.latest("unknown"), undefined);
+});
+
+test("compareVersions orders dotted numeric versions numerically", () => {
+  assert.ok(compareVersions("1.10.0", "1.9.0") > 0);
+  assert.ok(compareVersions("1.0.0", "1.0.1") < 0);
+  assert.equal(compareVersions("1.2.3", "1.2.3"), 0);
+  assert.ok(compareVersions("2.0.0", "1.99.99") > 0);
 });
 
 // The Phase 4 exit criterion: a fleet reports telemetry, then takes a rollback-safe OTA.

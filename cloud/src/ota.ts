@@ -5,8 +5,32 @@
 import type { DeviceRegistry } from "./registry.js";
 import { verifyBuild, type SignedBuild } from "./signing.js";
 
+// Compares two dotted numeric versions (e.g. "1.10.0" vs "1.9.0"). Returns a positive number
+// when a is newer, negative when older, zero when equal. Non-numeric components compare
+// lexically, so it degrades gracefully for unconventional version strings.
+export function compareVersions(a: string, b: string): number {
+  const ap = a.split(".");
+  const bp = b.split(".");
+  const len = Math.max(ap.length, bp.length);
+  for (let i = 0; i < len; i++) {
+    const as = ap[i] ?? "0";
+    const bs = bp[i] ?? "0";
+    const an = Number(as);
+    const bn = Number(bs);
+    if (Number.isInteger(an) && Number.isInteger(bn)) {
+      if (an !== bn) {
+        return an - bn;
+      }
+    } else if (as !== bs) {
+      return as < bs ? -1 : 1;
+    }
+  }
+  return 0;
+}
+
 export class FirmwareStore {
   private readonly builds = new Map<string, SignedBuild>();
+  private readonly artifacts = new Map<string, Uint8Array>();
   private readonly signingPublicKeyPem: string;
 
   constructor(signingPublicKeyPem: string) {
@@ -14,16 +38,37 @@ export class FirmwareStore {
   }
 
   // Publishes a build only if its signature and artifact hash verify. Rejects tampered or
-  // unsigned firmware.
+  // unsigned firmware. The artifact bytes are retained so devices can download them for OTA.
   publish(build: SignedBuild, artifact: Uint8Array): void {
     if (!verifyBuild(build, artifact, this.signingPublicKeyPem)) {
       throw new Error(`firmware verification failed: ${build.deviceType} ${build.version}`);
     }
     this.builds.set(this.key(build.deviceType, build.version), build);
+    this.artifacts.set(this.key(build.deviceType, build.version), artifact);
   }
 
   get(deviceType: string, version: string): SignedBuild | undefined {
     return this.builds.get(this.key(deviceType, version));
+  }
+
+  // Returns the raw artifact bytes for a published build, for a device to download and apply.
+  getArtifact(deviceType: string, version: string): Uint8Array | undefined {
+    return this.artifacts.get(this.key(deviceType, version));
+  }
+
+  // Returns the highest-versioned published build for a device type, which a device polls to
+  // discover whether an update is available.
+  latest(deviceType: string): SignedBuild | undefined {
+    let newest: SignedBuild | undefined;
+    for (const build of this.builds.values()) {
+      if (build.deviceType !== deviceType) {
+        continue;
+      }
+      if (newest === undefined || compareVersions(build.version, newest.version) > 0) {
+        newest = build;
+      }
+    }
+    return newest;
   }
 
   private key(deviceType: string, version: string): string {

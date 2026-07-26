@@ -120,6 +120,40 @@ test("firmware publish rejects tampered artifacts and serves verified builds", a
   }, service);
 });
 
+test("firmware artifact bytes and latest version are served for OTA", async () => {
+  const signer = new FirmwareSigner();
+  const service = new CloudService(() => 1000, signer.publicKeyPem);
+  const artifact1 = new TextEncoder().encode("thermostat firmware 1.1.0");
+  const artifact2 = new TextEncoder().encode("thermostat firmware 1.2.0 bytes");
+
+  await withServer(async (base) => {
+    for (const [version, artifact] of [
+      ["1.1.0", artifact1],
+      ["1.2.0", artifact2],
+    ] as const) {
+      const build = signer.sign("thermostat", version, artifact);
+      const published = await postJson(`${base}/firmware`, {
+        build,
+        artifactBase64: Buffer.from(artifact).toString("base64"),
+      });
+      assert.equal(published.status, 201);
+    }
+
+    // The device polls for the newest build and downloads its raw bytes.
+    const latest = await (await fetch(`${base}/firmware/thermostat/latest`)).json();
+    assert.equal(latest.version, "1.2.0");
+
+    const artifactResponse = await fetch(`${base}/firmware/thermostat/1.2.0/artifact`);
+    assert.equal(artifactResponse.status, 200);
+    assert.equal(artifactResponse.headers.get("content-type"), "application/octet-stream");
+    const downloaded = new Uint8Array(await artifactResponse.arrayBuffer());
+    assert.deepEqual(downloaded, artifact2);
+
+    const missing = await fetch(`${base}/firmware/thermostat/9.9.9/artifact`);
+    assert.equal(missing.status, 404);
+  }, service);
+});
+
 test("a rollout campaign runs and rolls back over HTTP", async () => {
   const service = new CloudService(() => 1000);
   for (const deviceId of ["r1", "r2"]) {
