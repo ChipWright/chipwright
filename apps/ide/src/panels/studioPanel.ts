@@ -438,10 +438,24 @@ export class StudioPanel {
     }
   }
 
-  // Resolves the twin binary, building it on demand if it has not been compiled yet, so the
-  // debugger works from a fresh checkout given a C toolchain. Returns null and reports the
-  // reason to the webview when no binary can be produced.
+  // The twin binary bundled with the extension for the current platform, if present. This is the
+  // prebuilt path: it runs in any workspace with no toolchain. Returns null when this platform has
+  // no bundled binary (then the source-build fallback applies).
+  private bundledTwinBinary(): string | null {
+    const name = process.platform === "win32" ? "twin_studio.exe" : "twin_studio";
+    const target = `${process.platform}-${process.arch}`;
+    const path = vscode.Uri.joinPath(this.context.extensionUri, "media", "twin", target, name).fsPath;
+    return existsSync(path) ? path : null;
+  }
+
+  // Resolves the twin binary: prefer the prebuilt one bundled with the extension (works in any
+  // workspace with no toolchain), and otherwise build it from source when the Chipwright source
+  // workspace is open. Returns null and reports the reason to the webview when neither is possible.
   private async ensureTwinBinary(): Promise<string | null> {
+    const bundled = this.bundledTwinBinary();
+    if (bundled !== null) {
+      return bundled;
+    }
     const folder = vscode.workspace.workspaceFolders?.[0];
     if (folder === undefined) {
       this.post({ type: "twinError", message: "Open the Chipwright source workspace to run the twin." });

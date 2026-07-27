@@ -147,6 +147,8 @@
   },
   "scripts": {
     "build": "node esbuild.mjs",
+    "build:twin": "node scripts/build-twin.mjs",
+    "vscode:prepublish": "node esbuild.mjs && node scripts/build-twin.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {

@@ -7,7 +7,9 @@
 // to stuck, failing, or drifting readings. With no descriptor it falls back to a single
 // temperature sensor, so existing callers keep working.
 
+#ifndef _WIN32
 #define _POSIX_C_SOURCE 200809L
+#endif
 
 #include "chipwright/hal.h"
 #include "chipwright/sdk.h"
@@ -17,7 +19,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <time.h>
+#endif
 
 #define TWIN_MAX_CAPS 32
 #define TWIN_KEY_LEN 64
@@ -165,8 +172,12 @@ static bool load_descriptor(const char *path, twin_spec_t *spec, const twin_args
 }
 
 static void sleep_ms(unsigned ms) {
+#ifdef _WIN32
+  Sleep(ms);
+#else
   struct timespec req = {.tv_sec = ms / 1000, .tv_nsec = (long)(ms % 1000) * 1000000L};
   nanosleep(&req, NULL);
+#endif
 }
 
 int main(int argc, char **argv) {

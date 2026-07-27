@@ -44,3 +44,6 @@ dependencies.lock
 
 # Designer "Generate" output: regenerable from the device manifest
 examples/*/generated/
+
+# Bundled twin binaries: produced by apps/ide/scripts/build-twin.mjs at package time
+apps/ide/media/twin/
