@@ -1,7 +1,7 @@
 {
   "name": "chipwright",
   "displayName": "Chipwright",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Define a smart device once and generate its firmware interface, cloud API, tests, docs, and Matter device. Visual designer, live twin debugger, and AI assistant.",
   "license": "Elastic-2.0",
   "publisher": "chipwright",
