@@ -32,29 +32,47 @@ export class CloudService {
 
   constructor(clock: Clock = () => Date.now(), signingPublicKeyPem?: string, store?: CloudStore) {
     this.clock = clock;
-    this.identity = new IdentityService(clock);
+    this.store = store ?? null;
+    const persisted = this.store?.load() ?? null;
+    // The CA is restored before the identity service is built so the trust root, and every
+    // certificate issued under it, survives a restart.
+    this.identity = new IdentityService(clock, persisted?.ca);
     this.firmwareStore =
       signingPublicKeyPem !== undefined ? new FirmwareStore(signingPublicKeyPem) : null;
-    this.store = store ?? null;
-    const persisted = this.store?.load();
     if (persisted != null) {
       this.restore(persisted);
     }
   }
 
-  // Serializes the core operational state (registry, shadows, command queue) for persistence.
+  // Serializes the full operational state for persistence.
   snapshot(): CloudSnapshot {
-    return {
+    const snapshot: CloudSnapshot = {
       registry: this.registry.snapshot(),
       shadow: this.shadow.snapshot(),
       commands: this.commands.snapshot(),
+      ca: this.identity.snapshot(),
+      certificates: [...this.certificates.values()],
+      rollouts: [...this.campaigns].map(([id, campaign]) => ({ id, ...campaign.toSnapshot() })),
     };
+    if (this.firmwareStore !== null) {
+      snapshot.firmware = this.firmwareStore.snapshot();
+    }
+    return snapshot;
   }
 
   private restore(snapshot: CloudSnapshot): void {
     this.registry.restore(snapshot.registry);
     this.shadow.restore(snapshot.shadow);
     this.commands.restore(snapshot.commands);
+    for (const certificate of snapshot.certificates ?? []) {
+      this.certificates.set(certificate.deviceId, certificate);
+    }
+    if (snapshot.firmware !== undefined && this.firmwareStore !== null) {
+      this.firmwareStore.restore(snapshot.firmware);
+    }
+    for (const { id, ...campaign } of snapshot.rollouts ?? []) {
+      this.campaigns.set(id, RolloutCampaign.fromSnapshot(this.registry, campaign));
+    }
   }
 
   private persist(): void {
@@ -123,6 +141,7 @@ export class CloudService {
       throw new Error("firmware trust anchor is not configured");
     }
     this.firmwareStore.publish(build, artifact);
+    this.persist();
   }
 
   getFirmware(deviceType: string, version: string): SignedBuild | undefined {
@@ -145,6 +164,7 @@ export class CloudService {
     const id = randomUUID();
     const campaign = new RolloutCampaign(this.registry, deviceIds, targetVersion, options);
     this.campaigns.set(id, campaign);
+    this.persist();
     return { id, status: campaign.status() };
   }
 
@@ -159,12 +179,14 @@ export class CloudService {
   advanceRollout(id: string): { batch: string[]; status: RolloutStatus } {
     const campaign = this.campaign(id);
     const batch = campaign.nextBatch();
+    this.persist();
     return { batch, status: campaign.status() };
   }
 
   reportRollout(id: string, deviceId: string, outcome: "applied" | "failed"): RolloutStatus {
     const campaign = this.campaign(id);
     campaign.report(deviceId, outcome);
+    this.persist();
     return campaign.status();
   }
 

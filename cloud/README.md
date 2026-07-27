@@ -79,7 +79,10 @@ PORT=8080 pnpm --filter @openhome/cloud serve
 ```
 
 State persists to a JSON file (`OPENHOME_CLOUD_STATE`, default
-`~/.openhome/cloud-state.json`) so the server resumes across restarts.
+`~/.openhome/cloud-state.json`) so the server resumes across restarts: the device
+registry, shadows, and command queue, plus the CA trust root and issued certificates,
+published firmware with its artifact bytes, and in-flight rollout campaigns. Persisted
+firmware is re-verified on load, so a tampered state file cannot inject an unsigned build.
 
 ## Not yet implemented
 

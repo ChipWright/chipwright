@@ -3,13 +3,20 @@
 // is the trust root the cloud, OTA, and (later) secure boot build on. Real Ed25519 keys
 // and signatures come from the Node standard library, so there are no dependencies.
 
-import { generateKeyPairSync, sign, verify, type KeyObject } from "node:crypto";
+import { createPrivateKey, generateKeyPairSync, sign, verify, type KeyObject } from "node:crypto";
 
 export interface DeviceCertificate {
   deviceId: string;
   publicKeyPem: string;
   issuedAt: number;
   signature: string;
+}
+
+// The CA key material, persisted so the trust root survives a restart. Without it a
+// restarted server would mint a new CA, invalidating every certificate it had issued.
+export interface CaSnapshot {
+  privateKeyPem: string;
+  publicKeyPem: string;
 }
 
 export interface DeviceIdentity {
@@ -28,11 +35,24 @@ export class IdentityService {
   readonly caPublicKeyPem: string;
   private readonly clock: () => number;
 
-  constructor(clock: () => number = () => Date.now()) {
-    const { publicKey, privateKey } = generateKeyPairSync("ed25519");
-    this.caPrivateKey = privateKey;
-    this.caPublicKeyPem = publicKey.export({ type: "spki", format: "pem" }).toString();
+  constructor(clock: () => number = () => Date.now(), ca?: CaSnapshot) {
+    if (ca !== undefined) {
+      this.caPrivateKey = createPrivateKey(ca.privateKeyPem);
+      this.caPublicKeyPem = ca.publicKeyPem;
+    } else {
+      const { publicKey, privateKey } = generateKeyPairSync("ed25519");
+      this.caPrivateKey = privateKey;
+      this.caPublicKeyPem = publicKey.export({ type: "spki", format: "pem" }).toString();
+    }
     this.clock = clock;
+  }
+
+  // Exports the CA key material for persistence, so a restart keeps the same trust root.
+  snapshot(): CaSnapshot {
+    return {
+      privateKeyPem: this.caPrivateKey.export({ type: "pkcs8", format: "pem" }).toString(),
+      publicKeyPem: this.caPublicKeyPem,
+    };
   }
 
   issue(deviceId: string): DeviceIdentity {
