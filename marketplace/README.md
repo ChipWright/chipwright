@@ -26,6 +26,15 @@ re-validates the manifest through the device engine, enforces the caller's set o
 publisher keys, and refuses any file path that would escape the target directory before
 writing anything.
 
+## Conformance gate
+
+A registry can require that every published device conform to its class. Construct it with
+`new PackageRegistry(store, { requireConformance: true })` and publish runs the conformance
+engine over the package's `device.yaml`, rejecting a device that is nonconformant to its
+Matter device type. The gate is off by default, so a registry accepts any well formed,
+correctly signed package unless it opts in. `packageConformance(pkg)` returns the full
+report for a registry that prefers to record the verdict rather than block on it.
+
 ## Command line
 
 ```sh

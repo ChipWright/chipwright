@@ -24,6 +24,7 @@
     "node": ">=22"
   },
   "dependencies": {
+    "@openhome/conformance": "workspace:*",
     "@openhome/device-engine": "workspace:*"
   },
   "devDependencies": {

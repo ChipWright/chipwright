@@ -8,6 +8,7 @@
 // in tests and a filesystem store from the command line, and could run over a network
 // store later without changing this class.
 
+import { packageConformance } from "./conformance.js";
 import { validatePackage, type DevicePackage, type PackageMeta } from "./package.js";
 import { verifySignedPackage, type SignedPackage } from "./signing.js";
 
@@ -70,12 +71,27 @@ export function compareVersions(a: string, b: string): number {
 
 export class PublishError extends Error {}
 
+// Registry policy. When requireConformance is set, a package whose device is nonconformant
+// to its class profile is rejected at publish. It is off by default so a registry accepts
+// any well formed, correctly signed package unless it opts into the stricter gate.
+export interface RegistryPolicy {
+  requireConformance?: boolean;
+}
+
 export class PackageRegistry {
-  constructor(private readonly store: RegistryStore) {}
+  private readonly policy: RegistryPolicy;
+
+  constructor(
+    private readonly store: RegistryStore,
+    policy: RegistryPolicy = {},
+  ) {
+    this.policy = policy;
+  }
 
   // Publishes a signed package after checking that it is well formed, that its signature
   // verifies, and that the same name and version has not already been published.
-  // Republishing an existing version is rejected so a released version is immutable.
+  // Republishing an existing version is rejected so a released version is immutable. When
+  // the registry requires conformance, a nonconformant device is also rejected.
   publish(signed: SignedPackage): void {
     if (!verifySignedPackage(signed)) {
       throw new PublishError("signature does not verify");
@@ -87,6 +103,18 @@ export class PackageRegistry {
     const { name, version } = signed.pkg.meta;
     if (this.store.get(name, version) !== undefined) {
       throw new PublishError(`${name}@${version} is already published`);
+    }
+    if (this.policy.requireConformance === true) {
+      const report = packageConformance(signed.pkg);
+      if (report !== null && report.verdict === "nonconformant") {
+        const reasons = report.diagnostics
+          .filter((d) => d.severity === "error")
+          .map((d) => d.message)
+          .join("; ");
+        throw new PublishError(
+          `device is nonconformant to its ${report.class} class${reasons.length > 0 ? `: ${reasons}` : ""}`,
+        );
+      }
     }
     this.store.put(signed);
   }

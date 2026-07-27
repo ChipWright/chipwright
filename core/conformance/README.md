@@ -71,6 +71,25 @@ const report = conformManifest(yamlSource);       // parse + judge
 // or conform(ir) against an already-parsed DeviceIR
 ```
 
+## Signed reports
+
+A verdict can be made tamper-evident and attributable. A `ConformanceAuthority` signs the hash
+of a report with an Ed25519 key; anyone can then confirm the report was produced for exactly that
+device and issued by the holder of a known authority key. This is the same supply-chain trust
+model as firmware signing in the cloud and package signing in the marketplace.
+
+```ts
+import { ConformanceAuthority, verifySignedReport } from "@openhome/conformance";
+
+const authority = new ConformanceAuthority();       // or new ConformanceAuthority(savedKeys)
+const signed = authority.sign(conformManifest(yamlSource));
+verifySignedReport(signed);                         // true if intact and correctly signed
+```
+
+The hash is order-independent, so a report survives a round trip through JSON without breaking
+its signature. Whether an authority is trusted is a separate decision the verifier makes against
+its own set of trusted keys.
+
 ## Board conformance
 
 The same evidence-over-assertion idea applies to hardware. A **board conformance record** captures

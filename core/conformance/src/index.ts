@@ -13,3 +13,10 @@ export {
   type MatterDeviceTypeCluster,
 } from "./matter-device-types.generated.js";
 export { conform, conformManifest } from "./conform.js";
+export {
+  ConformanceAuthority,
+  reportHash,
+  verifySignedReport,
+  type SignedConformanceReport,
+  type AuthorityKeys,
+} from "./report-signing.js";

@@ -136,6 +136,34 @@
         .replace(/(:\s*)(-?\d+(?:\.\d+)?|true|false)\b/g, '$1<span class="n">$2</span>')).join("\n");
   }
 
+  // Renders the conformance verdict as a labelled badge over the device's Matter device
+  // type, plus any conformance-specific diagnostics. A device whose class has no profile is
+  // shown as not assessed rather than as a failure.
+  function conformanceHtml(c) {
+    if (!c) {
+      return '<div class="empty-note">Not assessed.</div>';
+    }
+    if (!c.assessed) {
+      return '<div class="empty-note">No conformance profile for this device class yet.</div>';
+    }
+    const LABEL = {
+      conformant: "Conformant",
+      conformant_with_gaps: "Conformant with gaps",
+      nonconformant: "Nonconformant",
+    };
+    const CLASS = { conformant: "ok", conformant_with_gaps: "warn", nonconformant: "bad" };
+    const pill = '<span class="pill ' + (CLASS[c.verdict] || "bad") + '"><span class="dot"></span>'
+      + esc(LABEL[c.verdict] || c.verdict) + '</span>';
+    const type = c.matterDeviceTypeName
+      ? '<span class="counts">' + esc(c.matterDeviceTypeName) + '</span>'
+      : "";
+    const diags = (c.diagnostics || []).filter((d) => d.severity === "error");
+    const diagHtml = diags.length === 0
+      ? ""
+      : diags.map((d) => '<div class="diag error"><code>' + esc(d.path || "device") + '</code><span>' + esc(d.message) + '</span></div>').join("");
+    return '<div class="out-status">' + pill + type + '</div>' + diagHtml;
+  }
+
   function renderOutput(data) {
     const errors = (data.diagnostics || []).filter((d) => d.severity === "error").length;
     const valid = data.valid;
@@ -158,6 +186,7 @@
       + '<span class="counts">' + state.form.capabilities.length + ' capabilities &middot; ' + state.form.protocols.length + ' protocols</span>'
       + '<button class="btn primary small push-right" id="save-btn">' + ICON.save + 'Save</button></div>'
       + '<div class="out-section"><h4>Source</h4><div class="empty-note">' + esc(state.source) + '</div></div>'
+      + '<div class="out-section"><h4>Conformance</h4>' + conformanceHtml(data.conformance) + '</div>'
       + '<div class="out-section"><h4>Diagnostics ' + (diags.length ? "(" + diags.length + ")" : "") + '</h4>' + diagHtml + '</div>'
       + '<div class="out-section"><h4>Generated artifacts ' + (files.length ? "(" + files.length + ")" : "") + '</h4>' + fileHtml + '</div>'
       + '<div class="out-section"><h4>device.yaml</h4><pre class="code"><code>' + highlightYaml(data.yaml || "") + '</code></pre></div>';

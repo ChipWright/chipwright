@@ -8,6 +8,7 @@ import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import {
+  conformance,
   DESIGNER_PROTOCOLS,
   DEVICE_TEMPLATES,
   formToManifest,
@@ -254,15 +255,28 @@ export class StudioPanel {
     deviceName: string | null;
     diagnostics: unknown;
     files: string[];
+    conformance: {
+      assessed: boolean;
+      verdict: string;
+      matterDeviceTypeName: string | null;
+      diagnostics: unknown;
+    };
     yaml: string;
   } {
     const validation = validate(yaml);
     const generation = generate(yaml);
+    const conform = conformance(yaml);
     return {
       valid: validation.valid,
       deviceName: validation.deviceName,
       diagnostics: validation.diagnostics,
       files: generation.files.map((file) => file.path),
+      conformance: {
+        assessed: conform.assessed,
+        verdict: conform.verdict,
+        matterDeviceTypeName: conform.report.matterDeviceTypeName,
+        diagnostics: conform.report.diagnostics,
+      },
       yaml,
     };
   }

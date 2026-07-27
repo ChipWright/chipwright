@@ -11,6 +11,12 @@ export {
   type GenerationResult,
 } from "./manifest.js";
 export {
+  conformance,
+  type ConformanceResult,
+  type ConformanceReport,
+  type ConformanceVerdict,
+} from "./conformance.js";
+export {
   manifestToForm,
   formToManifest,
   emptyForm,

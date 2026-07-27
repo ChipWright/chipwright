@@ -95,6 +95,9 @@ importers:
 
   core/studio:
     dependencies:
+      '@openhome/conformance':
+        specifier: workspace:*
+        version: link:../conformance
       '@openhome/device-engine':
         specifier: workspace:*
         version: link:../device-engine
@@ -114,6 +117,9 @@ importers:
 
   marketplace:
     dependencies:
+      '@openhome/conformance':
+        specifier: workspace:*
+        version: link:../core/conformance
       '@openhome/device-engine':
         specifier: workspace:*
         version: link:../core/device-engine

@@ -70,6 +70,7 @@ input, select { font-family: inherit; font-size: 13px; }
 .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .pill.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); border-color: color-mix(in srgb, var(--ok) 30%, transparent); }
 .pill.bad { color: var(--error); background: color-mix(in srgb, var(--error) 14%, transparent); border-color: color-mix(in srgb, var(--error) 30%, transparent); }
+.pill.warn { color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); border-color: color-mix(in srgb, var(--warn) 30%, transparent); }
 .pill.run { color: var(--accent-strong); background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 34%, transparent); }
 .pill.idle { color: var(--fg-muted); border-color: var(--border); }
 .pill.run .dot { animation: pulse 1.4s ease-in-out infinite; }

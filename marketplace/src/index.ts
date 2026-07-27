@@ -7,6 +7,7 @@ export const version = "0.0.0";
 export * from "./package.js";
 export * from "./signing.js";
 export * from "./registry.js";
+export { packageConformance } from "./conformance.js";
 export * from "./pack.js";
 export * from "./install.js";
 export { FileSystemStore } from "./store.js";
