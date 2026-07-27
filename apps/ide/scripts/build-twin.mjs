@@ -10,6 +10,13 @@ import { mkdirSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+// The universal (no-target) package carries no prebuilt twin, so platforms without a bundled
+// binary fall back to a source build. That job sets CHIPWRIGHT_SKIP_TWIN=1 to skip this step.
+if (process.env["CHIPWRIGHT_SKIP_TWIN"] === "1") {
+  console.log("CHIPWRIGHT_SKIP_TWIN=1: skipping the bundled twin build");
+  process.exit(0);
+}
+
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(scriptDir, "..", "..", "..");
 const ideMedia = resolve(scriptDir, "..", "media");

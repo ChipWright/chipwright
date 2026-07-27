@@ -58,28 +58,45 @@ there too:
    git tag ide-v0.1.1
    git push origin ide-v0.1.1
    ```
-3. The workflow builds the workspace, packages the `.vsix`, publishes it to the Marketplace
-   (and Open VSX if configured), uploads the `.vsix` as a build artifact, and attaches it to
-   a GitHub release for the tag.
+3. The workflow builds and publishes several packages, then attaches each to a GitHub release
+   for the tag (see "Platform-specific packages" below).
 
 ### Rehearse without publishing
 
 Run the workflow manually from the Actions tab (`Run workflow`) with **dry_run** checked. It
-builds and packages the `.vsix` and uploads it as an artifact, but publishes nothing.
+builds and packages every `.vsix` and uploads them as artifacts, but publishes nothing. Use
+this to shake out the matrix before a real tag.
+
+## Platform-specific packages
+
+The Twin debugger runs a native binary, so the extension ships as **platform-specific packages**:
+one per OS/arch, each bundling that platform's prebuilt twin (`media/twin/<target>/twin_studio`,
+produced by `scripts/build-twin.mjs` during `vscode:prepublish`). The publish workflow builds
+these on a matrix:
+
+- `darwin-arm64` (macOS Apple Silicon), `darwin-x64` (macOS Intel), `linux-x64` — each with the
+  prebuilt twin, so the Twin tab works with no toolchain.
+- a **universal** package (built with `CHIPWRIGHT_SKIP_TWIN=1`, no bundled twin) so any other
+  platform (Windows, linux-arm64, ...) still installs; there the Twin tab falls back to a source
+  build in the Chipwright workspace, and reports it is unavailable elsewhere.
+
+The Marketplace serves each user the package matching their platform automatically. Adding a
+platform later means adding a matrix entry (and, for Windows, a C toolchain step).
 
 ## Publishing locally instead of via CI
 
-You can also publish from your machine. Log in once, then publish:
+You can publish a single platform-specific package from your machine (this bundles the twin for
+**your** platform only, so prefer CI for a full release):
 
 ```
 ! npx --yes @vscode/vsce login chipwright
 pnpm -r build
-cd apps/ide && npx --yes @vscode/vsce package --no-dependencies
-npx --yes @vscode/vsce publish --no-dependencies
+cd apps/ide
+npx --yes @vscode/vsce package --target darwin-arm64 --no-dependencies   # builds + bundles the twin
+npx --yes @vscode/vsce publish --target darwin-arm64 --no-dependencies
 ```
 
-Or pass the token inline without a stored login: set `VSCE_PAT` in your environment and run
-`npx @vscode/vsce publish --no-dependencies`.
+Or set `VSCE_PAT` in your environment and drop the `login` step.
 
 ## Notes
 
