@@ -1,10 +1,10 @@
 // The agent's tools, each grounded in the real platform. Reading, validating, and
-// compiling a manifest all go through @openhome/studio-core, so the assistant checks its
+// compiling a manifest all go through @chipwright/studio-core, so the assistant checks its
 // work against the actual DDL compiler rather than asserting it. The propose_device tool is
 // the human-in-the-loop gate: it refuses to record a proposal unless the manifest compiles,
 // which makes "grounded" an enforced invariant, not merely something the prompt requests.
 
-import { validate, generate, DEVICE_TEMPLATES, formToManifest } from "@openhome/studio-core";
+import { validate, generate, DEVICE_TEMPLATES, formToManifest } from "@chipwright/studio-core";
 import type { ToolSchema } from "./types.js";
 
 // A change the assistant proposes to a device manifest. It is only ever created by

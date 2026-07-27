@@ -8,7 +8,7 @@ import {
   parseManifest,
   type Diagnostic,
   type GeneratedFile,
-} from "@openhome/device-engine";
+} from "@chipwright/device-engine";
 
 export interface ValidationResult {
   valid: boolean;

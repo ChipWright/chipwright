@@ -4,7 +4,7 @@
 // means the designer's edit logic is unit tested in CI, and the shell only moves the form
 // between the webview and these functions.
 
-import { KNOWN_PROTOCOLS, parseManifest, type Protocol } from "@openhome/device-engine";
+import { KNOWN_PROTOCOLS, parseManifest, type Protocol } from "@chipwright/device-engine";
 import { stringify } from "yaml";
 
 export type FormCapability =

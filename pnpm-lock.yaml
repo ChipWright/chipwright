@@ -10,10 +10,10 @@ importers:
 
   apps/ide:
     devDependencies:
-      '@openhome/assistant':
+      '@chipwright/assistant':
         specifier: workspace:*
         version: link:../../core/assistant
-      '@openhome/studio-core':
+      '@chipwright/studio-core':
         specifier: workspace:*
         version: link:../../core/studio
       '@types/node':
@@ -43,7 +43,7 @@ importers:
 
   core/assistant:
     dependencies:
-      '@openhome/studio-core':
+      '@chipwright/studio-core':
         specifier: workspace:*
         version: link:../studio
       yaml:
@@ -62,7 +62,7 @@ importers:
 
   core/conformance:
     dependencies:
-      '@openhome/device-engine':
+      '@chipwright/device-engine':
         specifier: workspace:*
         version: link:../device-engine
     devDependencies:
@@ -94,10 +94,10 @@ importers:
 
   core/studio:
     dependencies:
-      '@openhome/conformance':
+      '@chipwright/conformance':
         specifier: workspace:*
         version: link:../conformance
-      '@openhome/device-engine':
+      '@chipwright/device-engine':
         specifier: workspace:*
         version: link:../device-engine
       yaml:
@@ -116,10 +116,10 @@ importers:
 
   marketplace:
     dependencies:
-      '@openhome/conformance':
+      '@chipwright/conformance':
         specifier: workspace:*
         version: link:../core/conformance
-      '@openhome/device-engine':
+      '@chipwright/device-engine':
         specifier: workspace:*
         version: link:../core/device-engine
     devDependencies:

@@ -3,7 +3,7 @@
 // device type. Like the rest of studio-core, the shell calls a plain function and never
 // imports the engine directly.
 
-import { conformManifest, type ConformanceReport, type ConformanceVerdict } from "@openhome/conformance";
+import { conformManifest, type ConformanceReport, type ConformanceVerdict } from "@chipwright/conformance";
 
 export type { ConformanceReport, ConformanceVerdict };
 

@@ -9,7 +9,7 @@
 // is enforced end to end.
 
 import { createHash } from "node:crypto";
-import { parseManifest } from "@openhome/device-engine";
+import { parseManifest } from "@chipwright/device-engine";
 
 // The manifest file every device package must contain, interpreted by the device engine.
 export const DEVICE_MANIFEST_FILE = "device.yaml";

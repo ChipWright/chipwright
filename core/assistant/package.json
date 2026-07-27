@@ -1,5 +1,5 @@
 {
-  "name": "@openhome/assistant",
+  "name": "@chipwright/assistant",
   "version": "0.0.0",
   "private": true,
   "description": "Provider-agnostic AI development assistant for OpenHome Studio: a grounded, tool-using agent that diagnoses devices and proposes DDL edits, verified against the real compiler before they reach you",
@@ -23,7 +23,7 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@openhome/studio-core": "workspace:*",
+    "@chipwright/studio-core": "workspace:*",
     "yaml": "^2.4.5"
   },
   "devDependencies": {

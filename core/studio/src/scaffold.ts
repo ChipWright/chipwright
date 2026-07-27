@@ -5,7 +5,7 @@
 // device definition and running code without asking the developer to write the seam from
 // scratch. The naming mirrors the firmware-interface generator so the two files fit together.
 
-import { parseManifest, type Capability, type DeviceIR } from "@openhome/device-engine";
+import { parseManifest, type Capability, type DeviceIR } from "@chipwright/device-engine";
 
 export interface ScaffoldFile {
   path: string;

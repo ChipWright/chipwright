@@ -19,8 +19,8 @@ import {
   TWIN_SOURCE_DIR,
   twinBinaryPath,
   validate,
-} from "@openhome/studio-core";
-import type { DeviceForm, TwinFault, TwinHandle } from "@openhome/studio-core";
+} from "@chipwright/studio-core";
+import type { DeviceForm, TwinFault, TwinHandle } from "@chipwright/studio-core";
 
 type Tab = "designer" | "twin";
 

@@ -149,8 +149,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
-    "@openhome/assistant": "workspace:*",
-    "@openhome/studio-core": "workspace:*",
+    "@chipwright/assistant": "workspace:*",
+    "@chipwright/studio-core": "workspace:*",
     "@types/node": "^22.5.0",
     "@types/vscode": "^1.90.0",
     "esbuild": "^0.23.0",

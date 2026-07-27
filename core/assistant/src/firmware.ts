@@ -7,7 +7,7 @@
 
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { generate, scaffold } from "@openhome/studio-core";
+import { generate, scaffold } from "@chipwright/studio-core";
 import { compileBsp, type BspCompileResult, type BspFile } from "./bsp-compile.js";
 import type { Tool } from "./tools.js";
 

@@ -7,7 +7,7 @@
 
 import * as vscode from "vscode";
 import * as path from "node:path";
-import { validate } from "@openhome/studio-core";
+import { validate } from "@chipwright/studio-core";
 
 const KNOWN_KEY = "openhome.knownDevices";
 

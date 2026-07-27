@@ -1,7 +1,7 @@
 // Webview host for the AI assistant. It owns a single chat panel and bridges its messages
 // to the assistant core: the webview sends a prompt, the host runs the grounded agent
 // against the configured provider, and streams the answer and any device proposals back.
-// All agent logic lives in @openhome/assistant; this host only supplies configuration, the
+// All agent logic lives in @chipwright/assistant; this host only supplies configuration, the
 // workspace file reader, and the apply step. The provider API key is read from VS Code
 // secret storage and never rendered into the webview.
 
@@ -19,7 +19,7 @@ import {
   type LlmConfig,
   type Message,
   type ProviderName,
-} from "@openhome/assistant";
+} from "@chipwright/assistant";
 import { StudioPanel } from "./studioPanel.js";
 
 const SECRET_KEY = "openhome.assistant.apiKey";

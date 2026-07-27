@@ -1,4 +1,4 @@
-import type { Diagnostic } from "@openhome/device-engine";
+import type { Diagnostic } from "@chipwright/device-engine";
 import type { MatterCluster } from "./clusters.js";
 
 // The conformance engine revision. Combined with the Matter data model version at report time, it

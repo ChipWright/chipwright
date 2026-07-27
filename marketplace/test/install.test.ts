@@ -7,7 +7,7 @@ import { InMemoryStore, PackageRegistry } from "../src/registry.js";
 import { Publisher } from "../src/signing.js";
 import { installPackage, InstallError, verifyForInstall } from "../src/install.js";
 import { packDirectory } from "../src/pack.js";
-import { parseManifest } from "@openhome/device-engine";
+import { parseManifest } from "@chipwright/device-engine";
 import { MANIFEST, samplePackage } from "./fixture.js";
 
 async function tempDir(prefix: string): Promise<string> {

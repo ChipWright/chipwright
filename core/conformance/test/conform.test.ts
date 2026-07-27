@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
-import { parseManifest } from "@openhome/device-engine";
+import { parseManifest } from "@chipwright/device-engine";
 import { conform, conformManifest } from "../src/conform.js";
 import { MATTER_DEVICE_TYPES } from "../src/matter-device-types.generated.js";
 

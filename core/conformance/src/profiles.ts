@@ -1,4 +1,4 @@
-import type { DeviceIR, Diagnostic } from "@openhome/device-engine";
+import type { DeviceIR, Diagnostic } from "@chipwright/device-engine";
 
 // A capability that fills an attribute of a device type's cluster rather than providing a whole
 // cluster of its own. Under the one-device-type-per-endpoint model, a thermostat's temperature

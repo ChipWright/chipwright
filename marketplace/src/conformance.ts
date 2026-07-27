@@ -3,7 +3,7 @@
 // device conforms to its Matter device type. This reuses the conformance engine directly;
 // the marketplace does not reimplement any of the judgement.
 
-import { conformManifest, type ConformanceReport } from "@openhome/conformance";
+import { conformManifest, type ConformanceReport } from "@chipwright/conformance";
 import { DEVICE_MANIFEST_FILE, type DevicePackage } from "./package.js";
 
 // Judges a package's device manifest for conformance. The profile is chosen by the

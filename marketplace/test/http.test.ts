@@ -10,7 +10,7 @@ import { createRegistryServer } from "../src/http.js";
 import { RegistryClient, RegistryClientError } from "../src/client.js";
 import { Publisher } from "../src/signing.js";
 import { writeVerifiedPackage } from "../src/install.js";
-import { parseManifest } from "@openhome/device-engine";
+import { parseManifest } from "@chipwright/device-engine";
 import { samplePackage } from "./fixture.js";
 
 // Starts a registry server on an ephemeral port and returns a client for it plus a

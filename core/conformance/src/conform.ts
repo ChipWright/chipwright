@@ -1,4 +1,4 @@
-import { hasErrors, parseManifest, type DeviceIR, type Diagnostic } from "@openhome/device-engine";
+import { hasErrors, parseManifest, type DeviceIR, type Diagnostic } from "@chipwright/device-engine";
 import { PLATFORM_CLUSTERS, formatClusterId } from "./clusters.js";
 import { MATTER_DATA_MODEL_VERSION, MATTER_DEVICE_TYPES } from "./matter-device-types.generated.js";
 import { profileForClass } from "./profiles.js";
