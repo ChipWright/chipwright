@@ -9,14 +9,13 @@ importers:
   .: {}
 
   apps/ide:
-    dependencies:
+    devDependencies:
       '@openhome/assistant':
         specifier: workspace:*
         version: link:../../core/assistant
       '@openhome/studio-core':
         specifier: workspace:*
         version: link:../../core/studio
-    devDependencies:
       '@types/node':
         specifier: ^22.5.0
         version: 22.20.1

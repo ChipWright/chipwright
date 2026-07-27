@@ -14,7 +14,7 @@ await build({
   outfile: "dist/extension.js",
   format: "cjs",
   platform: "node",
-  target: "node22",
+  target: "node20",
   external: ["vscode"],
   sourcemap: true,
   logLevel: "info",

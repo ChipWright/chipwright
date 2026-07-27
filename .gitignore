@@ -38,3 +38,9 @@ sdkconfig.old
 .cache/
 managed_components/
 dependencies.lock
+
+# Packaged VS Code extension artifacts (build with: vsce package)
+*.vsix
+
+# Designer "Generate" output: regenerable from the device manifest
+examples/*/generated/

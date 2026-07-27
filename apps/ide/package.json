@@ -1,16 +1,26 @@
 {
-  "name": "@openhome/ide",
+  "name": "openhome-studio",
   "displayName": "OpenHome Studio",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
   "description": "Developer IDE for OpenHome Studio: visual device designer and live twin debugger, delivered as a VS Code extension over the shell-agnostic studio core",
   "license": "Elastic-2.0",
   "publisher": "openhome",
+  "icon": "media/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Diegoregalado0/openhome-studio.git",
+    "directory": "apps/ide"
+  },
+  "homepage": "https://github.com/Diegoregalado0/openhome-studio#readme",
+  "bugs": {
+    "url": "https://github.com/Diegoregalado0/openhome-studio/issues"
+  },
   "engines": {
-    "vscode": "^1.90.0",
-    "node": ">=22"
+    "vscode": "^1.90.0"
   },
   "categories": [
+    "Visualization",
+    "AI",
     "Other"
   ],
   "main": "./dist/extension.js",
@@ -134,11 +144,9 @@
     "build": "node esbuild.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
-  "dependencies": {
-    "@openhome/assistant": "workspace:*",
-    "@openhome/studio-core": "workspace:*"
-  },
   "devDependencies": {
+    "@openhome/assistant": "workspace:*",
+    "@openhome/studio-core": "workspace:*",
     "@types/node": "^22.5.0",
     "@types/vscode": "^1.90.0",
     "esbuild": "^0.23.0",
