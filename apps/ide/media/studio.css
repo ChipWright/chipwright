@@ -161,6 +161,7 @@ input::placeholder { color: var(--fg-muted); opacity: 0.7; }
 /* ---- Output pane --------------------------------------------------------- */
 .out-status { display: flex; align-items: center; gap: var(--s3); margin-bottom: var(--s5); }
 .out-status .counts { color: var(--fg-muted); font-size: 12px; }
+.out-status .actions { display: flex; align-items: center; gap: var(--s2); }
 .out-section { margin-bottom: var(--s5); }
 .out-section > h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg-muted); margin-bottom: var(--s2); }
 

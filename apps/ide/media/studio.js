@@ -16,6 +16,8 @@
     plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>',
     file: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2h8l4 4v16H6z"/><path d="M14 2v4h4"/></svg>',
     save: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 3h11l3 3v15H5zM8 3v5h7"/></svg>',
+    download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>',
+    chip: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M10 2v3m4-3v3m-4 14v3m4-3v3M2 10h3m-3 4h3m14-4h3m-3 4h3"/></svg>',
   };
   const TICON = {
     thermostat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14 14V5a2 2 0 0 0-4 0v9a4 4 0 1 0 4 0z"/></svg>',
@@ -181,10 +183,15 @@
       ? '<div class="empty-note">Fix the errors above to generate artifacts.</div>'
       : '<div class="filelist">' + files.map((f) => '<div class="filerow">' + ICON.file + '<code>' + esc(f) + '</code></div>').join("") + '</div>';
 
+    const disabled = valid ? "" : " disabled";
     $("#output").innerHTML =
       '<div class="out-status"><span class="pill ' + (valid ? "ok" : "bad") + '"><span class="dot"></span>' + (valid ? "Valid" : "Invalid") + '</span>'
       + '<span class="counts">' + state.form.capabilities.length + ' capabilities &middot; ' + state.form.protocols.length + ' protocols</span>'
-      + '<button class="btn primary small push-right" id="save-btn">' + ICON.save + 'Save</button></div>'
+      + '<div class="actions push-right">'
+      + '<button class="btn ghost small" id="scaffold-btn" title="Scaffold a starter firmware module wired to this device"' + disabled + '>' + ICON.chip + 'Scaffold firmware</button>'
+      + '<button class="btn ghost small" id="generate-btn" title="Write all generated artifacts to disk"' + disabled + '>' + ICON.download + 'Generate</button>'
+      + '<button class="btn primary small" id="save-btn">' + ICON.save + 'Save</button>'
+      + '</div></div>'
       + '<div class="out-section"><h4>Source</h4><div class="empty-note">' + esc(state.source) + '</div></div>'
       + '<div class="out-section"><h4>Conformance</h4>' + conformanceHtml(data.conformance) + '</div>'
       + '<div class="out-section"><h4>Diagnostics ' + (diags.length ? "(" + diags.length + ")" : "") + '</h4>' + diagHtml + '</div>'
@@ -192,6 +199,10 @@
       + '<div class="out-section"><h4>device.yaml</h4><pre class="code"><code>' + highlightYaml(data.yaml || "") + '</code></pre></div>';
 
     $("#save-btn").addEventListener("click", () => vscode.postMessage({ type: "saveForm", form: state.form }));
+    if (valid) {
+      $("#generate-btn").addEventListener("click", () => { vscode.postMessage({ type: "generate", form: state.form }); toast("Generating artifacts..."); });
+      $("#scaffold-btn").addEventListener("click", () => { vscode.postMessage({ type: "scaffold", form: state.form }); toast("Scaffolding firmware..."); });
+    }
   }
 
   // ---- Creation screen ---------------------------------------------------
@@ -328,6 +339,15 @@
         state.source = m.source; toast("Saved to " + m.source); vscode.postMessage({ type: "refresh" }); break;
       case "saveError":
         toast(m.message); break;
+      case "actionError":
+        toast(m.message); break;
+      case "generated":
+        toast("Generated " + m.count + " artifact" + (m.count === 1 ? "" : "s") + " to " + m.source); break;
+      case "scaffolded":
+        toast(m.skipped.length > 0
+          ? "Firmware ready (" + m.skipped.length + " file" + (m.skipped.length === 1 ? "" : "s") + " already existed)"
+          : "Scaffolded firmware (" + m.written + " file" + (m.written === 1 ? "" : "s") + ")");
+        break;
       case "openWizard":
         showWizard(); break;
       case "focus":

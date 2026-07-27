@@ -14,6 +14,7 @@ import {
   formToManifest,
   generate,
   manifestToForm,
+  scaffold,
   spawnTwin,
   TWIN_SOURCE_DIR,
   twinBinaryPath,
@@ -28,7 +29,9 @@ type InboundMessage =
   | { type: "startTwin"; fault: TwinFault; faultAt: number; offset: number }
   | { type: "applyForm"; form: DeviceForm }
   | { type: "createDevice"; form: DeviceForm }
-  | { type: "saveForm"; form: DeviceForm };
+  | { type: "saveForm"; form: DeviceForm }
+  | { type: "generate"; form: DeviceForm }
+  | { type: "scaffold"; form: DeviceForm };
 
 export class StudioPanel {
   private static current: StudioPanel | undefined;
@@ -73,6 +76,12 @@ export class StudioPanel {
             break;
           case "saveForm":
             void this.saveForm(message.form);
+            break;
+          case "generate":
+            void this.generateToDisk(message.form);
+            break;
+          case "scaffold":
+            void this.scaffoldFirmware(message.form);
             break;
           case "startTwin":
             void this.startTwin(message.fault, message.faultAt, message.offset);
@@ -248,6 +257,89 @@ export class StudioPanel {
     }
     const picked = await vscode.window.showSaveDialog(options);
     return picked ?? null;
+  }
+
+  // Ensures the device is on disk and returns the directory holding its manifest, which is
+  // where generated artifacts and the firmware scaffold are written. Prompts for a location
+  // and saves first when the device has never been saved; returns null when the developer
+  // cancels, so a generate or scaffold action can abort cleanly.
+  private async ensureSaved(form: DeviceForm): Promise<vscode.Uri | null> {
+    const existing = this.saveTarget();
+    if (existing !== null) {
+      return vscode.Uri.joinPath(existing, "..");
+    }
+    const target = await this.promptSaveTarget(form);
+    if (target === null) {
+      return null;
+    }
+    await vscode.workspace.fs.writeFile(target, new TextEncoder().encode(formToManifest(form)));
+    this.activeUri = target;
+    this.overrideManifest = undefined;
+    this.currentForm = form;
+    this.post({ type: "saved", source: vscode.workspace.asRelativePath(target) });
+    return vscode.Uri.joinPath(target, "..");
+  }
+
+  // Writes every generated artifact under a "generated" folder next to the manifest. This is
+  // regenerable output that is safe to overwrite on every run; the hand-written firmware
+  // scaffold lives outside it, so re-generating never clobbers the developer's code.
+  private async generateToDisk(form: DeviceForm): Promise<void> {
+    const generation = generate(formToManifest(form));
+    if (!generation.valid) {
+      this.post({ type: "actionError", message: "Fix the errors before generating artifacts." });
+      return;
+    }
+    const dir = await this.ensureSaved(form);
+    if (dir === null) {
+      this.post({ type: "actionError", message: "Generate cancelled." });
+      return;
+    }
+    const root = vscode.Uri.joinPath(dir, "generated");
+    for (const file of generation.files) {
+      const target = joinRelative(root, file.path);
+      await vscode.workspace.fs.writeFile(target, new TextEncoder().encode(file.contents));
+    }
+    this.post({
+      type: "generated",
+      count: generation.files.length,
+      source: vscode.workspace.asRelativePath(root),
+    });
+  }
+
+  // Writes the starter firmware module next to the manifest and opens it for editing. Existing
+  // files are never overwritten (the module is the developer's to edit), so re-running only
+  // fills in what is missing and always opens the module so the developer lands in their code.
+  private async scaffoldFirmware(form: DeviceForm): Promise<void> {
+    const result = scaffold(formToManifest(form));
+    if (!result.valid) {
+      this.post({ type: "actionError", message: "Fix the errors before scaffolding firmware." });
+      return;
+    }
+    const dir = await this.ensureSaved(form);
+    if (dir === null) {
+      this.post({ type: "actionError", message: "Scaffold cancelled." });
+      return;
+    }
+    let written = 0;
+    const skipped: string[] = [];
+    let module: vscode.Uri | undefined;
+    for (const file of result.files) {
+      const target = joinRelative(dir, file.path);
+      if (file.path.endsWith(".c")) {
+        module = target;
+      }
+      if (await exists(target)) {
+        skipped.push(file.path);
+        continue;
+      }
+      await vscode.workspace.fs.writeFile(target, new TextEncoder().encode(file.contents));
+      written++;
+    }
+    if (module !== undefined) {
+      const doc = await vscode.workspace.openTextDocument(module);
+      await vscode.window.showTextDocument(doc, { preview: false });
+    }
+    this.post({ type: "scaffolded", written, skipped });
   }
 
   private compile(yaml: string): {
@@ -465,6 +557,21 @@ function buildTwin(dir: string): Promise<void> {
       }
     });
   });
+}
+
+// Joins a forward-slash relative path (as produced by the generators and the scaffolder) onto
+// a base URI segment by segment, so nested artifact paths resolve on any platform.
+function joinRelative(base: vscode.Uri, relative: string): vscode.Uri {
+  return vscode.Uri.joinPath(base, ...relative.split("/"));
+}
+
+async function exists(uri: vscode.Uri): Promise<boolean> {
+  try {
+    await vscode.workspace.fs.stat(uri);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function createNonce(): string {

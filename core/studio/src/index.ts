@@ -17,6 +17,11 @@ export {
   type ConformanceVerdict,
 } from "./conformance.js";
 export {
+  scaffold,
+  type ScaffoldFile,
+  type ScaffoldResult,
+} from "./scaffold.js";
+export {
   manifestToForm,
   formToManifest,
   emptyForm,

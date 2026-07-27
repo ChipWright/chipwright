@@ -7,6 +7,10 @@ as a **VS Code extension** (branch 10, Phase 5).
 ## Panels
 
 - **Designer** and **Twin** — visual DDL editing and live twin debugging, over `core/studio`.
+  From the Designer, **Generate** writes every artifact (firmware interface, cloud API, tests,
+  docs) to a `generated/` folder next to the manifest, and **Scaffold firmware** writes a
+  starter module wired to the generated interface and opens it. Generated output is
+  regenerable; the scaffold is yours to edit and is never overwritten.
 - **AI Assistant** (`Open AI Assistant` from the Devices view) — a chat panel over
   `core/assistant`. It is bring-your-own-key (provider and model in settings under
   `openhome.assistant`; the API key is stored in VS Code secret storage, never in settings
