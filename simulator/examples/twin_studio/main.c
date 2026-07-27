@@ -1,9 +1,11 @@
 // A controllable twin for the developer IDE's live debugger. It runs the same SDK and HAL
-// as physical firmware, emitting one NDJSON telemetry line per tick on stdout and pausing
-// between ticks so the stream can be observed in real time. A sensor fault can be injected
-// at a chosen tick, so the debugger shows the stream reacting to stuck, failing, or drifting
-// readings. The telemetry shape matches the cloud bridge, so the same output can be piped
-// to either the IDE or the bridge.
+// as physical firmware, emitting one NDJSON telemetry line per tick per sensor on stdout and
+// pausing between ticks so the stream can be observed in real time. The device it runs is not
+// hardwired: a descriptor (--descriptor) lists the manifest's sensors and actuators, so the twin
+// reflects whatever device is open, with a simulated source behind each sensor. A sensor fault
+// can be injected at a chosen tick on a chosen sensor, so the debugger shows the stream reacting
+// to stuck, failing, or drifting readings. With no descriptor it falls back to a single
+// temperature sensor, so existing callers keep working.
 
 #define _POSIX_C_SOURCE 200809L
 
@@ -11,10 +13,30 @@
 #include "chipwright/sdk.h"
 #include "chipwright/sim.h"
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
+#define TWIN_MAX_CAPS 32
+#define TWIN_KEY_LEN 64
+#define TWIN_UNIT_LEN 32
+
+typedef struct {
+  char key[TWIN_KEY_LEN];
+  char unit[TWIN_UNIT_LEN];
+  float initial;
+  float step;
+} twin_sensor_t;
+
+typedef struct {
+  char device_name[TWIN_KEY_LEN];
+  twin_sensor_t sensors[TWIN_MAX_CAPS];
+  unsigned sensor_count;
+  char actuators[TWIN_MAX_CAPS][TWIN_KEY_LEN];
+  unsigned actuator_count;
+} twin_spec_t;
 
 typedef struct {
   unsigned ticks;
@@ -24,6 +46,8 @@ typedef struct {
   cw_fault_kind_t fault;
   long fault_at;
   float offset;
+  char fault_target[TWIN_KEY_LEN];
+  char descriptor[1024];
 } twin_args_t;
 
 static void ndjson_sink(const cw_telemetry_sample_t *sample, void *ctx) {
@@ -70,11 +94,74 @@ static void parse_args(int argc, char **argv, twin_args_t *args) {
       args->fault_at = strtol(value, NULL, 10);
     } else if (strcmp(argv[i], "--offset") == 0) {
       args->offset = strtof(value, NULL);
+    } else if (strcmp(argv[i], "--fault-target") == 0) {
+      snprintf(args->fault_target, sizeof args->fault_target, "%s", value);
+    } else if (strcmp(argv[i], "--descriptor") == 0) {
+      snprintf(args->descriptor, sizeof args->descriptor, "%s", value);
     } else {
       continue;
     }
     i++;
   }
+}
+
+// Seeds a sensor's simulated source from its declared range: it starts mid-range and drifts
+// gently across it, so the stream looks plausible for the unit. A rangeless sensor uses the
+// generic defaults so it still moves.
+static void seed_sensor(twin_sensor_t *sensor, bool has_range, float min, float max,
+                        float default_initial, float default_step) {
+  if (has_range && max > min) {
+    sensor->initial = (min + max) / 2.0f;
+    sensor->step = (max - min) / 80.0f;
+  } else {
+    sensor->initial = default_initial;
+    sensor->step = default_step;
+  }
+}
+
+static void add_default_device(twin_spec_t *spec, const twin_args_t *args) {
+  snprintf(spec->device_name, sizeof spec->device_name, "%s", "smart_thermostat");
+  twin_sensor_t *sensor = &spec->sensors[0];
+  snprintf(sensor->key, sizeof sensor->key, "%s", "temperature_sensor");
+  snprintf(sensor->unit, sizeof sensor->unit, "%s", "celsius");
+  seed_sensor(sensor, true, -20.0f, 50.0f, args->initial, args->step);
+  spec->sensor_count = 1;
+}
+
+// Parses the device descriptor: one directive per line.
+//   device <name>
+//   sensor <key> <unit> [<min> <max>]
+//   actuator <key> [<modes>]
+// Returns false when the file cannot be read, so the caller can fall back to the default device.
+static bool load_descriptor(const char *path, twin_spec_t *spec, const twin_args_t *args) {
+  FILE *file = fopen(path, "r");
+  if (file == NULL) {
+    return false;
+  }
+  char line[512];
+  while (fgets(line, sizeof line, file) != NULL) {
+    char key[TWIN_KEY_LEN];
+    char unit[TWIN_UNIT_LEN];
+    float min = 0.0f;
+    float max = 0.0f;
+    if (sscanf(line, "device %63s", key) == 1) {
+      snprintf(spec->device_name, sizeof spec->device_name, "%s", key);
+    } else if (spec->sensor_count < TWIN_MAX_CAPS &&
+               sscanf(line, "sensor %63s %31s %f %f", key, unit, &min, &max) >= 2) {
+      const bool has_range = sscanf(line, "sensor %63s %31s %f %f", key, unit, &min, &max) == 4;
+      twin_sensor_t *sensor = &spec->sensors[spec->sensor_count++];
+      snprintf(sensor->key, sizeof sensor->key, "%s", key);
+      snprintf(sensor->unit, sizeof sensor->unit, "%s", unit);
+      seed_sensor(sensor, has_range, min, max, args->initial, args->step);
+    } else if (spec->actuator_count < TWIN_MAX_CAPS && sscanf(line, "actuator %63s", key) == 1) {
+      snprintf(spec->actuators[spec->actuator_count++], TWIN_KEY_LEN, "%s", key);
+    }
+  }
+  fclose(file);
+  if (spec->device_name[0] == '\0') {
+    snprintf(spec->device_name, sizeof spec->device_name, "%s", "device");
+  }
+  return spec->sensor_count > 0 || spec->actuator_count > 0;
 }
 
 static void sleep_ms(unsigned ms) {
@@ -91,25 +178,53 @@ int main(int argc, char **argv) {
       .fault = CW_FAULT_NONE,
       .fault_at = -1,
       .offset = 5.0f,
+      .fault_target = {0},
+      .descriptor = {0},
   };
   parse_args(argc, argv, &args);
 
-  cw_sim_source_t source;
-  cw_fault_sensor_t sensor;
-  cw_sim_source_init(&source, args.initial, args.step);
-  cw_fault_sensor_init(&sensor, cw_sim_source_driver(&source));
+  twin_spec_t spec = {0};
+  if (args.descriptor[0] == '\0' || !load_descriptor(args.descriptor, &spec, &args)) {
+    add_default_device(&spec, &args);
+  }
+
+  // These live for the whole run: the HAL stores drivers whose context points into them.
+  cw_sim_source_t sources[TWIN_MAX_CAPS];
+  cw_fault_sensor_t faults[TWIN_MAX_CAPS];
+  cw_sim_actuator_t actuators[TWIN_MAX_CAPS];
 
   cw_hal_reset();
-  cw_hal_register_sensor("temperature_sensor", "celsius", cw_fault_sensor_driver(&sensor));
+  for (unsigned i = 0; i < spec.sensor_count; i++) {
+    cw_sim_source_init(&sources[i], spec.sensors[i].initial, spec.sensors[i].step);
+    cw_fault_sensor_init(&faults[i], cw_sim_source_driver(&sources[i]));
+    cw_hal_register_sensor(spec.sensors[i].key, spec.sensors[i].unit,
+                           cw_fault_sensor_driver(&faults[i]));
+  }
+  for (unsigned i = 0; i < spec.actuator_count; i++) {
+    cw_sim_actuator_init(&actuators[i], spec.actuators[i]);
+    cw_hal_register_actuator(spec.actuators[i], cw_sim_actuator_driver(&actuators[i]));
+  }
 
-  const cw_device_t device = {.name = "smart_thermostat"};
+  // The fault targets the named sensor, or the first sensor when no target is given.
+  unsigned fault_index = 0;
+  if (args.fault_target[0] != '\0') {
+    for (unsigned i = 0; i < spec.sensor_count; i++) {
+      if (strcmp(spec.sensors[i].key, args.fault_target) == 0) {
+        fault_index = i;
+        break;
+      }
+    }
+  }
+
+  const cw_device_t device = {.name = spec.device_name};
   cw_device_init(&device);
 
   cw_telemetry_set_sink(ndjson_sink, NULL);
   for (unsigned tick = 0; tick < args.ticks; tick++) {
-    if (args.fault != CW_FAULT_NONE && args.fault_at >= 0 && (long)tick == args.fault_at) {
+    if (args.fault != CW_FAULT_NONE && args.fault_at >= 0 && (long)tick == args.fault_at &&
+        spec.sensor_count > 0) {
       const cw_fault_config_t config = {.kind = args.fault, .offset = args.offset};
-      cw_fault_sensor_set(&sensor, config);
+      cw_fault_sensor_set(&faults[fault_index], config);
     }
     cw_device_run(&device, 1);
     if (tick + 1 < args.ticks) {

@@ -22,6 +22,17 @@ typedef struct {
 void cw_sim_source_init(cw_sim_source_t *source, float initial, float step);
 cw_sensor_driver_t cw_sim_source_driver(cw_sim_source_t *source);
 
+// A simulated actuator that records the last mode applied and logs each change. It lets a
+// manifest's actuators be registered on the twin, with no hardware behind them, so a device
+// with actuators runs on the twin exactly as one with only sensors.
+typedef struct {
+  const char *key;
+  int mode;
+} cw_sim_actuator_t;
+
+void cw_sim_actuator_init(cw_sim_actuator_t *actuator, const char *key);
+cw_actuator_driver_t cw_sim_actuator_driver(cw_sim_actuator_t *actuator);
+
 // Fault models applied on top of an inner sensor driver.
 typedef enum {
   CW_FAULT_NONE = 0,   // pass the inner reading through unchanged

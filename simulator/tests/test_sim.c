@@ -193,8 +193,19 @@ static void test_command_apply(void) {
   CHECK(g_command_mode == 0);
 }
 
+static void test_sim_actuator(void) {
+  cw_sim_actuator_t actuator;
+  cw_sim_actuator_init(&actuator, "hvac");
+  const cw_actuator_driver_t driver = cw_sim_actuator_driver(&actuator);
+  CHECK(driver.set_mode(driver.ctx, 2) == CW_OK);
+  CHECK(actuator.mode == 2);
+  CHECK(driver.set_mode(driver.ctx, 0) == CW_OK);
+  CHECK(actuator.mode == 0);
+}
+
 int main(void) {
   test_source_advances();
+  test_sim_actuator();
   test_fault_none_passthrough();
   test_fault_offset();
   test_fault_stuck_freezes();
