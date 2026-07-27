@@ -5,7 +5,8 @@
 
 import * as vscode from "vscode";
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   conformance,
@@ -16,6 +17,7 @@ import {
   manifestToForm,
   scaffold,
   spawnTwin,
+  twinPlan,
   TWIN_SOURCE_DIR,
   twinBinaryPath,
   validate,
@@ -26,7 +28,7 @@ type Tab = "designer" | "twin";
 
 type InboundMessage =
   | { type: "ready" | "refresh" | "stopTwin" | "openAssistant" }
-  | { type: "startTwin"; fault: TwinFault; faultAt: number; offset: number }
+  | { type: "startTwin"; fault: TwinFault; faultAt: number; offset: number; faultTarget: string }
   | { type: "applyForm"; form: DeviceForm }
   | { type: "createDevice"; form: DeviceForm }
   | { type: "saveForm"; form: DeviceForm }
@@ -84,7 +86,7 @@ export class StudioPanel {
             void this.scaffoldFirmware(message.form);
             break;
           case "startTwin":
-            void this.startTwin(message.fault, message.faultAt, message.offset);
+            void this.startTwin(message.fault, message.faultAt, message.offset, message.faultTarget);
             break;
           case "stopTwin":
             this.stopTwin();
@@ -353,11 +355,13 @@ export class StudioPanel {
       matterDeviceTypeName: string | null;
       diagnostics: unknown;
     };
+    twinSensors: { key: string; unit: string }[];
     yaml: string;
   } {
     const validation = validate(yaml);
     const generation = generate(yaml);
     const conform = conformance(yaml);
+    const plan = twinPlan(yaml);
     return {
       valid: validation.valid,
       deviceName: validation.deviceName,
@@ -369,6 +373,7 @@ export class StudioPanel {
         matterDeviceTypeName: conform.report.matterDeviceTypeName,
         diagnostics: conform.report.diagnostics,
       },
+      twinSensors: plan?.sensors ?? [],
       yaml,
     };
   }
@@ -384,18 +389,35 @@ export class StudioPanel {
     return null;
   }
 
-  private async startTwin(fault: TwinFault, faultAt: number, offset: number): Promise<void> {
+  private async startTwin(
+    fault: TwinFault,
+    faultAt: number,
+    offset: number,
+    faultTarget: string,
+  ): Promise<void> {
     this.stopTwin();
+    // Run the device currently open in the designer, not a fixed one: derive its descriptor so
+    // the twin streams this manifest's sensors. A device that does not compile has nothing to run.
+    const plan = this.currentForm !== undefined ? twinPlan(formToManifest(this.currentForm)) : null;
+    if (plan === null || plan.sensors.length === 0) {
+      this.post({
+        type: "twinError",
+        message: "Add at least one sensor and fix any errors to run the twin.",
+      });
+      return;
+    }
     const binPath = await this.ensureTwinBinary();
     if (binPath === null) {
       return;
     }
+    const descriptorPath = join(tmpdir(), `chipwright-twin-${process.pid}.desc`);
+    writeFileSync(descriptorPath, plan.descriptor, "utf8");
     this.post({ type: "twinStarted" });
     this.twin = spawnTwin(
-      { binPath, ticks: 60, intervalMs: 250, initial: 21, step: 0.5, fault, faultAt, offset },
+      { binPath, ticks: 60, intervalMs: 250, fault, faultAt, offset, descriptorPath, faultTarget },
       {
         onSample: (sample) => {
-          this.post({ type: "sample", value: sample.value, unit: sample.unit });
+          this.post({ type: "sample", metric: sample.metric, value: sample.value, unit: sample.unit });
         },
         onExit: () => {
           this.twin = undefined;
@@ -507,6 +529,9 @@ export class StudioPanel {
             <button aria-selected="false" data-fault="offset">offset</button>
           </div>
         </div>
+        <div class="ctl is-hidden" id="fault-target-ctl">on
+          <select id="fault-target"></select>
+        </div>
         <div class="ctl">at tick
           <div class="stepper"><button data-step="at" data-d="-1">-</button><input id="fault-at" value="6"><button data-step="at" data-d="1">+</button></div>
         </div>
@@ -520,7 +545,7 @@ export class StudioPanel {
     <div class="card">
       <div class="readout"><span class="val" id="twin-val">--</span><span class="unit" id="twin-unit">celsius</span><span class="meta"><span id="twin-count">0</span> samples</span></div>
       <div class="chart-wrap"><canvas id="chart"></canvas><div class="chart-empty" id="chart-empty">Start the twin to stream live telemetry</div></div>
-      <div class="chart-legend"><span class="k"><span class="swatch temp"></span>temperature</span><span class="k"><span class="swatch fault"></span>fault injected</span></div>
+      <div class="chart-legend" id="chart-legend"></div>
     </div>
   </div>
 </section>

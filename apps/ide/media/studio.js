@@ -9,7 +9,7 @@
   const vscode = acquireVsCodeApi();
   const $ = (s, r) => (r || document).querySelector(s);
 
-  const state = { form: null, protocols: [], templates: [], source: "", hasDevice: false };
+  const state = { form: null, protocols: [], templates: [], source: "", hasDevice: false, twinSensors: [] };
 
   const ICON = {
     trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16M9 7V5h6v2m-8 0 1 13h8l1-13"/></svg>',
@@ -244,15 +244,35 @@
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !wizardScreen.hidden) closeWizard(); });
 
   // ---- Twin --------------------------------------------------------------
-  const twin = { running: false, samples: [], tick: 0, timer: null, fault: "none", faultIndex: -1 };
+  const PALETTE = ["#1fbccb", "#e0a458", "#8b5cf6", "#3fb950", "#f472b6", "#38bdf8", "#f85149", "#a3e635"];
+  const twin = { running: false, series: {}, order: [], tick: 0, fault: "none", target: "", faultIndex: -1 };
   const canvas = $("#chart"), ctx = canvas.getContext("2d");
   const faultSeg = $("#fault-seg"), faultAt = $("#fault-at"), faultOff = $("#fault-off"), offsetCtl = $("#offset-ctl");
+  const faultTargetCtl = $("#fault-target-ctl"), faultTarget = $("#fault-target");
+
+  function seriesColor(i) { return PALETTE[i % PALETTE.length]; }
+
+  // The offset amount only applies to an offset fault; the sensor picker only matters when a
+  // fault is set and the device has more than one sensor to choose between.
+  function updateFaultControls() {
+    offsetCtl.classList.toggle("is-hidden", twin.fault !== "offset");
+    faultTargetCtl.classList.toggle("is-hidden", twin.fault === "none" || state.twinSensors.length < 2);
+  }
+
+  function populateFaultTargets() {
+    const prev = faultTarget.value;
+    faultTarget.innerHTML = state.twinSensors
+      .map((s) => '<option value="' + esc(s.key) + '">' + esc(s.key) + "</option>")
+      .join("");
+    if (state.twinSensors.some((s) => s.key === prev)) faultTarget.value = prev;
+    updateFaultControls();
+  }
 
   faultSeg.addEventListener("click", (e) => {
     const b = e.target.closest("[data-fault]"); if (!b) return;
     faultSeg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-selected", String(x === b)));
     twin.fault = b.dataset.fault;
-    offsetCtl.classList.toggle("is-hidden", twin.fault !== "offset");
+    updateFaultControls();
   });
   document.querySelectorAll("[data-step]").forEach((b) => b.addEventListener("click", () => {
     const input = b.dataset.step === "at" ? faultAt : faultOff;
@@ -269,59 +289,82 @@
   }
 
   function startTwin() {
-    twin.samples = []; twin.tick = 0;
+    twin.series = {}; twin.order = []; twin.tick = 0;
+    twin.target = faultTarget.value || "";
     twin.faultIndex = twin.fault === "none" ? -1 : (parseInt(faultAt.value, 10) || 0);
     $("#twin-val").textContent = "--"; $("#twin-count").textContent = "0";
     $("#chart-empty").classList.add("is-hidden");
-    draw();
-    vscode.postMessage({ type: "startTwin", fault: twin.fault, faultAt: parseInt(faultAt.value, 10) || 0, offset: parseFloat(faultOff.value) || 0 });
+    renderLegend(); draw();
+    vscode.postMessage({ type: "startTwin", fault: twin.fault, faultAt: parseInt(faultAt.value, 10) || 0, offset: parseFloat(faultOff.value) || 0, faultTarget: twin.target });
+  }
+
+  // Records one telemetry sample under its metric, creating a new series (and chart line) the
+  // first time a metric is seen. The big readout follows the first sensor; the legend carries
+  // the live value of every sensor.
+  function addSample(metric, value, unit) {
+    let s = twin.series[metric];
+    if (!s) { s = twin.series[metric] = { unit: unit, values: [] }; twin.order.push(metric); }
+    s.values.push(value);
+    twin.tick = Math.max(twin.tick, s.values.length);
+    const first = twin.series[twin.order[0]];
+    $("#twin-val").textContent = first.values[first.values.length - 1].toFixed(2);
+    $("#twin-unit").textContent = first.unit;
+    $("#twin-count").textContent = twin.tick;
+    renderLegend(); draw();
+  }
+
+  function renderLegend() {
+    const items = twin.order.map((metric, i) => {
+      const s = twin.series[metric];
+      const latest = s.values.length ? " <b>" + esc(s.values[s.values.length - 1].toFixed(1) + " " + s.unit) + "</b>" : "";
+      return '<span class="k"><span class="swatch" style="background:' + seriesColor(i) + '"></span>' + esc(metric) + latest + "</span>";
+    });
+    if (twin.faultIndex >= 0) items.push('<span class="k"><span class="swatch fault"></span>fault injected</span>');
+    $("#chart-legend").innerHTML = items.join("");
   }
 
   function cvar(n) { return getComputedStyle(document.body).getPropertyValue(n).trim(); }
 
+  // Draws one line per sensor. Sensors have different units and scales, so each series is
+  // normalized to its own running range (the legend carries the live values); a shared numeric
+  // y-axis would be meaningless across units, so it is omitted.
   function draw() {
     const dpr = window.devicePixelRatio || 1;
     const w = canvas.clientWidth, h = canvas.clientHeight;
     canvas.width = w * dpr; canvas.height = h * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
-    const padL = 38, padR = 12, padT = 12, padB = 22;
-    const grid = cvar("--border-soft") || "rgba(128,128,128,.3)", ink = cvar("--fg-muted"), accent = cvar("--accent"), err = cvar("--error");
-    const vals = twin.samples;
+    const padL = 12, padR = 12, padT = 12, padB = 14;
+    const grid = cvar("--border-soft") || "rgba(128,128,128,.3)", err = cvar("--error");
 
-    let min = 18, max = 26;
-    if (vals.length) { min = Math.min.apply(null, vals); max = Math.max.apply(null, vals); if (max - min < 2) { const m = (max + min) / 2; min = m - 1; max = m + 1; } const pad = (max - min) * 0.1; min -= pad; max += pad; }
-    const X = (i) => padL + (vals.length <= 1 ? 0 : (i / (vals.length - 1)) * (w - padL - padR));
-    const Y = (v) => padT + (h - padT - padB) * (1 - (v - min) / (max - min));
-
-    ctx.font = "10px " + cvar("--mono");
-    ctx.textBaseline = "middle"; ctx.fillStyle = ink;
     for (let g = 0; g <= 4; g++) {
-      const y = padT + (h - padT - padB) * (g / 4), val = max - (max - min) * (g / 4);
+      const y = padT + (h - padT - padB) * (g / 4);
       ctx.strokeStyle = grid; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w - padR, y); ctx.stroke();
-      ctx.fillText(val.toFixed(1), 4, y);
     }
-    if (!vals.length) return;
+    if (!twin.order.length) return;
 
-    if (twin.faultIndex >= 0 && twin.faultIndex < vals.length) {
+    const span = Math.max(2, twin.tick);
+    const X = (i) => padL + (i / (span - 1)) * (w - padL - padR);
+
+    if (twin.faultIndex >= 0 && twin.faultIndex < twin.tick) {
       const fx = X(twin.faultIndex);
       ctx.strokeStyle = err; ctx.setLineDash([4, 4]); ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.moveTo(fx, padT); ctx.lineTo(fx, h - padB); ctx.stroke(); ctx.setLineDash([]);
     }
 
-    const grad = ctx.createLinearGradient(0, padT, 0, h - padB);
-    grad.addColorStop(0, accent + "44"); grad.addColorStop(1, accent + "00");
-    ctx.beginPath(); ctx.moveTo(X(0), Y(vals[0]));
-    vals.forEach((v, i) => ctx.lineTo(X(i), Y(v)));
-    ctx.lineTo(X(vals.length - 1), h - padB); ctx.lineTo(X(0), h - padB); ctx.closePath();
-    ctx.fillStyle = grad; ctx.fill();
-
-    ctx.beginPath(); ctx.moveTo(X(0), Y(vals[0]));
-    vals.forEach((v, i) => ctx.lineTo(X(i), Y(v)));
-    ctx.strokeStyle = accent; ctx.lineWidth = 2; ctx.lineJoin = "round"; ctx.stroke();
-
-    const lx = X(vals.length - 1), ly = Y(vals[vals.length - 1]);
-    ctx.fillStyle = accent + "33"; ctx.beginPath(); ctx.arc(lx, ly, 6, 0, 7); ctx.fill();
-    ctx.fillStyle = accent; ctx.beginPath(); ctx.arc(lx, ly, 3.2, 0, 7); ctx.fill();
+    twin.order.forEach((metric, si) => {
+      const vals = twin.series[metric].values;
+      if (!vals.length) return;
+      let min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+      if (max - min < 1e-6) { min -= 1; max += 1; }
+      const pad = (max - min) * 0.15; min -= pad; max += pad;
+      const Y = (v) => padT + (h - padT - padB) * (1 - (v - min) / (max - min));
+      const color = seriesColor(si);
+      ctx.beginPath(); ctx.moveTo(X(0), Y(vals[0]));
+      vals.forEach((v, i) => ctx.lineTo(X(i), Y(v)));
+      ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.lineJoin = "round"; ctx.stroke();
+      const lx = X(vals.length - 1), ly = Y(vals[vals.length - 1]);
+      ctx.fillStyle = color; ctx.beginPath(); ctx.arc(lx, ly, 3, 0, 7); ctx.fill();
+    });
   }
 
   // ---- Messages ----------------------------------------------------------
@@ -330,10 +373,12 @@
     switch (m.type) {
       case "init":
         state.form = m.form; state.protocols = m.protocols; state.templates = m.templates || []; state.source = m.source || ""; state.hasDevice = !!m.hasDevice;
+        state.twinSensors = m.twinSensors || []; populateFaultTargets();
         renderInspector(); renderOutput(m);
         if (state.hasDevice) hideWizard(); else showWizard();
         break;
       case "update":
+        state.twinSensors = m.twinSensors || []; populateFaultTargets();
         renderOutput(m); break;
       case "saved":
         state.source = m.source; toast("Saved to " + m.source); vscode.postMessage({ type: "refresh" }); break;
@@ -357,7 +402,7 @@
       case "twinStatus":
         setStatus("run", m.message); break;
       case "sample":
-        twin.samples.push(m.value); $("#twin-val").textContent = m.value.toFixed(2); $("#twin-unit").textContent = m.unit; $("#twin-count").textContent = twin.samples.length; draw(); break;
+        addSample(m.metric, m.value, m.unit); break;
       case "twinExit":
         setRunning(false); setStatus("idle", "complete"); break;
       case "twinError":
