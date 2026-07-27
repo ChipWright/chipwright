@@ -146,7 +146,7 @@ export class AssistantPanel {
         provider,
         tools: defaultTools(),
         context: {
-          proposals: [],
+          proposals: [] as DeviceProposal[],
           readFile: async (path) => {
             const uri = this.resolvePath(path);
             return new TextDecoder().decode(await vscode.workspace.fs.readFile(uri));

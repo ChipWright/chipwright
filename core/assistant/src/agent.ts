@@ -4,7 +4,7 @@
 // It never applies changes itself; proposals are collected for a surface to confirm.
 
 import type { LlmProvider, Message } from "./types.js";
-import type { DeviceProposal, Tool, ToolContext } from "./tools.js";
+import type { Tool } from "./tools.js";
 
 export const DEFAULT_SYSTEM_PROMPT = `You are the OpenHome device development assistant. You help engineers understand, diagnose, and evolve smart-device definitions written in the OpenHome Device Definition Language (DDL), a YAML manifest.
 
@@ -23,10 +23,12 @@ Rules:
 - Do not apply changes yourself. Proposing is where your job ends; the developer decides whether to apply.
 - Be concise and specific.`;
 
-export interface AgentOptions {
+// The loop is generic over its context, which must expose a proposals array. The device
+// assistant uses ToolContext; the BSP assistant uses its own context with BSP proposals.
+export interface AgentOptions<C extends { proposals: unknown[] }> {
   provider: LlmProvider;
-  tools: Tool[];
-  context: ToolContext;
+  tools: Tool<C>[];
+  context: C;
   messages: Message[];
   model: string;
   system?: string;
@@ -35,13 +37,15 @@ export interface AgentOptions {
   temperature?: number;
 }
 
-export interface AgentResult {
+export interface AgentResult<C extends { proposals: unknown[] }> {
   answer: string;
-  proposals: DeviceProposal[];
+  proposals: C["proposals"];
   steps: number;
 }
 
-export async function runAgent(options: AgentOptions): Promise<AgentResult> {
+export async function runAgent<C extends { proposals: unknown[] }>(
+  options: AgentOptions<C>,
+): Promise<AgentResult<C>> {
   const registry = new Map(options.tools.map((t) => [t.schema.name, t]));
   const schemas = options.tools.map((t) => t.schema);
   const messages: Message[] = [...options.messages];

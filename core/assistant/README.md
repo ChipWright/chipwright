@@ -40,6 +40,20 @@ The loop sends the conversation and tool schemas to your provider, runs any tool
 feeds the results back, and repeats until a final answer or a step cap. It never writes
 files; proposals are surfaced for you to apply.
 
+## Drafting a board support package
+
+The same grounded loop helps a hardware contributor draft a BSP for a new chip. Its tools
+read the exact HAL interface and a reference BSP, and the grounding is a real host compile
+check: `propose_bsp` refuses any draft that does not compile against `sdk/firmware/include`
+with the repository's flags (including `-Werror`), so a BSP that would not build can never
+be surfaced. This is the firmware counterpart of `propose_device`.
+
+- `read_hal_interface` — the HAL and SDK headers a BSP must implement
+- `read_reference_bsp` — the native or esp32 BSP as a worked example (esp32 shows vendor
+  headers stubbed under `hostcheck/`)
+- `compile_bsp` — compile a draft against the real HAL and return the compiler output
+- `propose_bsp` — the gate: only a BSP that compiles is recorded
+
 ## Command line
 
 ```sh
@@ -58,6 +72,14 @@ export OPENHOME_LLM_PROVIDER=openai-compatible
 export OPENHOME_LLM_BASE_URL=http://localhost:11434/v1
 export OPENHOME_LLM_MODEL=llama3.1
 node dist/cli.js ask "explain what this device does" --device examples/thermostat/device.yaml
+```
+
+Draft a BSP for a new board (run from the repo root so it can read the HAL). The draft is
+shown only if it compiles; re-run with `--apply` to write it under `sdk/firmware/bsp/<board>`:
+
+```sh
+node core/assistant/dist/cli.js bsp "STM32U5 with an on-die temperature sensor"
+node core/assistant/dist/cli.js bsp "STM32U5 ..." --apply
 ```
 
 ## Privacy

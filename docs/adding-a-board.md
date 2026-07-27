@@ -26,6 +26,17 @@ device.yaml ─▶ generated interface ─▶ SDK ─▶ HAL ─▶  your BSP  �
                                                       (this guide)
 ```
 
+The steps below are what a BSP contains and how it is verified. If you would rather start
+from a draft, the assistant can generate one for you and prove it compiles first:
+
+```sh
+node core/assistant/dist/cli.js bsp "<your chip, and how it reads temperature>"
+```
+
+It reads the HAL interface, models the draft on an existing BSP, and only shows you a result
+that passes the same host compile check described in step 3. Treat its output as a starting
+point to review and finish, not a substitute for the steps here.
+
 ## 1. Implement the drivers
 
 Create `sdk/firmware/bsp/<yourchip>/<yourchip>_bsp.c`. A sensor driver fills an output value;

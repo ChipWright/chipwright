@@ -23,9 +23,11 @@ export interface ToolContext {
   readFile: (path: string) => Promise<string>;
 }
 
-export interface Tool {
+// A tool over a context C. The context defaults to ToolContext (the device assistant), so
+// existing device tools need no type argument; the BSP assistant supplies its own context.
+export interface Tool<C = ToolContext> {
   schema: ToolSchema;
-  handler: (args: Record<string, unknown>, context: ToolContext) => Promise<string>;
+  handler: (args: Record<string, unknown>, context: C) => Promise<string>;
 }
 
 function str(args: Record<string, unknown>, key: string): string {
