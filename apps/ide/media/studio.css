@@ -1,5 +1,5 @@
 /* Studio webview styling. Every color maps to a VS Code theme variable so the panel reads as
-   a first-party editor surface in any theme (light, dark, high-contrast); OpenHome's teal is
+   a first-party editor surface in any theme (light, dark, high-contrast); Chipwright's teal is
    the one deliberate brand accent, used only for identity and key states. */
 
 :root {

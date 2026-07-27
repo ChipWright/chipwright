@@ -1,10 +1,10 @@
 {
-  "name": "openhome-studio",
-  "displayName": "OpenHome Studio",
+  "name": "chipwright",
+  "displayName": "Chipwright",
   "version": "0.1.0",
-  "description": "Developer IDE for OpenHome Studio: visual device designer and live twin debugger, delivered as a VS Code extension over the shell-agnostic studio core",
+  "description": "Define a smart device once and generate its firmware interface, cloud API, tests, docs, and Matter device. Visual designer, live twin debugger, and AI assistant.",
   "license": "Elastic-2.0",
-  "publisher": "openhome",
+  "publisher": "chipwright",
   "icon": "media/icon.png",
   "repository": {
     "type": "git",
@@ -37,7 +37,7 @@
       "activitybar": [
         {
           "id": "openhome",
-          "title": "OpenHome Studio",
+          "title": "Chipwright",
           "icon": "media/activity-icon.svg"
         }
       ]
@@ -60,35 +60,35 @@
       {
         "command": "openhome.newDevice",
         "title": "New Device",
-        "category": "OpenHome",
+        "category": "Chipwright",
         "icon": "$(add)"
       },
       {
         "command": "openhome.openManifest",
         "title": "Open Device Manifest...",
-        "category": "OpenHome",
+        "category": "Chipwright",
         "icon": "$(go-to-file)"
       },
       {
         "command": "openhome.openDesigner",
         "title": "Open Device Designer",
-        "category": "OpenHome"
+        "category": "Chipwright"
       },
       {
         "command": "openhome.debugTwin",
         "title": "Debug Twin",
-        "category": "OpenHome"
+        "category": "Chipwright"
       },
       {
         "command": "openhome.openAssistant",
         "title": "Open Assistant",
-        "category": "OpenHome",
+        "category": "Chipwright",
         "icon": "$(sparkle)"
       },
       {
         "command": "openhome.refreshDevices",
         "title": "Refresh Devices",
-        "category": "OpenHome",
+        "category": "Chipwright",
         "icon": "$(refresh)"
       }
     ],
@@ -119,11 +119,15 @@
       ]
     },
     "configuration": {
-      "title": "OpenHome Studio",
+      "title": "Chipwright",
       "properties": {
         "openhome.assistant.provider": {
           "type": "string",
-          "enum": ["anthropic", "gemini", "openai-compatible"],
+          "enum": [
+            "anthropic",
+            "gemini",
+            "openai-compatible"
+          ],
           "default": "anthropic",
           "description": "LLM provider for the AI assistant. openai-compatible works with OpenAI, OpenRouter, and local servers via a base URL."
         },

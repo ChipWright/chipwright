@@ -1,18 +1,17 @@
-# Publishing the OpenHome Studio extension
+# Publishing the Chipwright extension
 
 The extension is published from this monorepo by the `Publish extension` GitHub Actions
 workflow (`.github/workflows/publish-extension.yml`), triggered by a version tag. This guide
 covers the one-time account setup and the per-release steps.
 
-The extension identity is `openhome.openhome-studio` (publisher `openhome`, name
-`openhome-studio`), set in `package.json`. Both names appear unclaimed as of this writing.
+The extension identity is `chipwright.chipwright` (publisher `chipwright`, name `chipwright`), set in `package.json`. Both names appear unclaimed as of this writing.
 
 ## One-time setup
 
 ### 1. Create the Marketplace publisher
 
 1. Sign in to <https://marketplace.visualstudio.com/manage> with a Microsoft (Azure) account.
-2. Create a publisher whose **ID is exactly `openhome`** (it must match the `publisher` field
+2. Create a publisher whose **ID is exactly `chipwright`** (it must match the `publisher` field
    in `package.json`). The display name can be anything.
 
 ### 2. Create a Personal Access Token (PAT)
@@ -44,7 +43,7 @@ there too:
    (User Settings > Access Tokens).
 2. Claim the namespace and add the secret:
    ```
-   ! npx --yes ovsx create-namespace openhome -p <your-open-vsx-token>
+   ! npx --yes ovsx create-namespace chipwright -p <your-open-vsx-token>
    ! gh secret set OVSX_PAT
    ```
    When `OVSX_PAT` is set, the workflow publishes to Open VSX as well; when it is not, that
@@ -73,7 +72,7 @@ builds and packages the `.vsix` and uploads it as an artifact, but publishes not
 You can also publish from your machine. Log in once, then publish:
 
 ```
-! npx --yes @vscode/vsce login openhome
+! npx --yes @vscode/vsce login chipwright
 pnpm -r build
 cd apps/ide && npx --yes @vscode/vsce package --no-dependencies
 npx --yes @vscode/vsce publish --no-dependencies

@@ -105,7 +105,7 @@ export class StudioPanel {
   // webview never receives a premature "no device" init that would pop the creation wizard.
   private static ensurePanel(context: vscode.ExtensionContext): StudioPanel {
     if (StudioPanel.current === undefined) {
-      const panel = vscode.window.createWebviewPanel("openhomeStudio", "OpenHome Studio", vscode.ViewColumn.Beside, {
+      const panel = vscode.window.createWebviewPanel("openhomeStudio", "Chipwright", vscode.ViewColumn.Beside, {
         enableScripts: true,
         retainContextWhenHidden: true,
         localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, "media")],
@@ -422,7 +422,7 @@ export class StudioPanel {
   private async ensureTwinBinary(): Promise<string | null> {
     const folder = vscode.workspace.workspaceFolders?.[0];
     if (folder === undefined) {
-      this.post({ type: "twinError", message: "Open the OpenHome Studio workspace to run the twin." });
+      this.post({ type: "twinError", message: "Open the Chipwright source workspace to run the twin." });
       return null;
     }
     const root = folder.uri.fsPath;
@@ -430,7 +430,7 @@ export class StudioPanel {
     if (existsSync(binPath)) {
       return binPath;
     }
-    // The twin is the OpenHome digital-twin C program, which lives in the OpenHome Studio
+    // The twin is the Chipwright digital-twin C program, which lives in the Chipwright
     // repository. In any other workspace there is nothing to build, so say so plainly rather
     // than surface a raw make error. The Designer and artifact generation work anywhere; the
     // Twin debugger needs this source tree.
@@ -438,7 +438,7 @@ export class StudioPanel {
       this.post({
         type: "twinError",
         message:
-          "The Twin debugger runs the OpenHome digital twin, which is part of the OpenHome Studio source workspace. Open that workspace to use it.",
+          "The Twin debugger runs the Chipwright digital twin, which is part of the Chipwright source workspace. Open that workspace to use it.",
       });
       return null;
     }
@@ -468,7 +468,7 @@ export class StudioPanel {
     const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "studio.css"));
     const nonce = createNonce();
     const home =
-      '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2.5 11.2l1.3 1.5L5 11.7V21h5.5v-5.5h3V21H19v-9.3l1.2 1 1.3-1.5zM7 19v-9l5-4.3 5 4.3v9h-1.5v-5.5h-7V19z"/></svg>';
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M10 2v3m4-3v3m-4 14v3m4-3v3M2 10h3m-3 4h3m14-4h3m-3 4h3"/></svg>';
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -477,11 +477,11 @@ export class StudioPanel {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource}; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
 <link href="${styleUri.toString()}" rel="stylesheet">
-<title>OpenHome Studio</title>
+<title>Chipwright</title>
 </head>
 <body>
 <header class="topbar">
-  <div class="wordmark"><span class="glyph">${home}</span><b>OpenHome Studio</b></div>
+  <div class="wordmark"><span class="glyph">${home}</span><b>Chipwright</b></div>
   <div class="context"><span class="sep">/</span><span class="device" id="ctx-device">device</span><span class="pill idle" id="ctx-pill"><span class="dot"></span><span id="ctx-pill-text">...</span></span></div>
   <div class="seg" role="tablist">
     <button role="tab" aria-selected="true" data-tab="designer">Designer</button>
@@ -527,7 +527,7 @@ export class StudioPanel {
 
 <div class="wizard-screen" id="wizard" hidden role="dialog" aria-modal="true" aria-label="Create a device">
   <header>
-    <div class="wordmark"><span class="glyph">${home}</span><b>OpenHome Studio</b></div>
+    <div class="wordmark"><span class="glyph">${home}</span><b>Chipwright</b></div>
     <button class="icon-btn" id="wiz-close" data-wiz="cancel" title="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
   </header>
   <div class="wiz-body"><div class="wiz-inner">

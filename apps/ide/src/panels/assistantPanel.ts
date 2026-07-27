@@ -78,7 +78,7 @@ export class AssistantPanel {
   static show(context: vscode.ExtensionContext, uri?: vscode.Uri): void {
     const column = vscode.ViewColumn.Beside;
     if (AssistantPanel.current === undefined) {
-      const panel = vscode.window.createWebviewPanel("openhomeAssistant", "OpenHome Assistant", column, {
+      const panel = vscode.window.createWebviewPanel("openhomeAssistant", "Chipwright Assistant", column, {
         enableScripts: true,
         retainContextWhenHidden: true,
         localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, "media")],
@@ -360,7 +360,7 @@ export class AssistantPanel {
     const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "assistant.css"));
     const nonce = createNonce();
     const home =
-      '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2.5 11.2l1.3 1.5L5 11.7V21h5.5v-5.5h3V21H19v-9.3l1.2 1 1.3-1.5zM7 19v-9l5-4.3 5 4.3v9h-1.5v-5.5h-7V19z"/></svg>';
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M10 2v3m4-3v3m-4 14v3m4-3v3M2 10h3m-3 4h3m14-4h3m-3 4h3"/></svg>';
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -369,7 +369,7 @@ export class AssistantPanel {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource}; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
 <link href="${styleUri.toString()}" rel="stylesheet">
-<title>OpenHome Assistant</title>
+<title>Chipwright Assistant</title>
 </head>
 <body>
 <header class="topbar">

@@ -1,8 +1,8 @@
-# Developer IDE
+# Chipwright
 
-The developer application for OpenHome Studio: a project explorer, a visual device
+The developer application for Chipwright: a project explorer, a visual device
 designer that emits DDL, a live twin debugger, and an AI assistant panel. It is delivered
-as a **VS Code extension** (branch 10, Phase 5).
+as a **VS Code extension** over the shell-agnostic studio core.
 
 ## Panels
 
