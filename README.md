@@ -1,6 +1,6 @@
 # Chipwright
 
-[![CI](https://github.com/Diegoregalado0/openhome-studio/actions/workflows/ci.yml/badge.svg)](https://github.com/Diegoregalado0/openhome-studio/actions/workflows/ci.yml)
+[![CI](https://github.com/Diegoregalado0/chipwright/actions/workflows/ci.yml/badge.svg)](https://github.com/Diegoregalado0/chipwright/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Elastic--2.0%20%2B%20Apache--2.0-blue.svg)](LICENSING.md)
 
 **Build a production smart device from a single definition, and it's free.**
@@ -70,8 +70,8 @@ Requirements: **Node.js >= 22**, **pnpm >= 11** (`corepack enable`), and a **C t
 Debian/Ubuntu).
 
 ```sh
-git clone https://github.com/Diegoregalado0/openhome-studio.git
-cd openhome-studio
+git clone https://github.com/Diegoregalado0/chipwright.git
+cd chipwright
 pnpm install
 pnpm -r build        # build every package
 pnpm -r test         # run the TypeScript test suites
@@ -313,3 +313,7 @@ Chipwright is **free to use**, split across two licenses along a deliberate line
   [Apache-2.0](sdk/firmware/LICENSE), so board support can be contributed and shipped freely.
 
 Your device definitions are your own content. Full details in [LICENSING.md](LICENSING.md).
+
+## Author
+
+Chipwright is created and maintained by **[Diego Regalado](https://github.com/Diegoregalado0)**.

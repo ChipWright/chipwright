@@ -54,7 +54,7 @@ jobs:
 
       - name: Package the .vsix
         working-directory: apps/ide
-        run: npx --yes @vscode/vsce@latest package --no-dependencies --out openhome-studio.vsix
+        run: npx --yes @vscode/vsce@latest package --no-dependencies --out chipwright.vsix
 
       - name: Publish to the VS Code Marketplace
         if: ${{ inputs.dry_run != true }}
@@ -64,18 +64,18 @@ jobs:
             echo "::error::VSCE_PAT is not set. Add it in Settings > Secrets and variables > Actions (see apps/ide/PUBLISHING.md)." >&2
             exit 1
           fi
-          npx --yes @vscode/vsce@latest publish --no-dependencies --packagePath openhome-studio.vsix
+          npx --yes @vscode/vsce@latest publish --no-dependencies --packagePath chipwright.vsix
 
       - name: Publish to Open VSX (optional; runs only when OVSX_PAT is set)
         if: ${{ inputs.dry_run != true && env.OVSX_PAT != '' }}
         working-directory: apps/ide
-        run: npx --yes ovsx@latest publish openhome-studio.vsix -p "$OVSX_PAT"
+        run: npx --yes ovsx@latest publish chipwright.vsix -p "$OVSX_PAT"
 
       - name: Upload the .vsix as a workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: openhome-studio-vsix
-          path: apps/ide/openhome-studio.vsix
+          name: chipwright-vsix
+          path: apps/ide/chipwright.vsix
 
       - name: Attach the .vsix to the GitHub release
         if: startsWith(github.ref, 'refs/tags/')
@@ -83,7 +83,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         working-directory: apps/ide
         run: |
-          gh release create "$GITHUB_REF_NAME" openhome-studio.vsix \
+          gh release create "$GITHUB_REF_NAME" chipwright.vsix \
             --title "Chipwright $GITHUB_REF_NAME" \
             --notes "Chipwright VS Code extension $GITHUB_REF_NAME" \
-          || gh release upload "$GITHUB_REF_NAME" openhome-studio.vsix --clobber
+          || gh release upload "$GITHUB_REF_NAME" chipwright.vsix --clobber

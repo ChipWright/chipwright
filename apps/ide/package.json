@@ -5,15 +5,16 @@
   "description": "Define a smart device once and generate its firmware interface, cloud API, tests, docs, and Matter device. Visual designer, live twin debugger, and AI assistant.",
   "license": "Elastic-2.0",
   "publisher": "chipwright",
+  "author": "Diego Regalado (https://github.com/Diegoregalado0)",
   "icon": "media/icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Diegoregalado0/openhome-studio.git",
+    "url": "https://github.com/Diegoregalado0/chipwright.git",
     "directory": "apps/ide"
   },
-  "homepage": "https://github.com/Diegoregalado0/openhome-studio#readme",
+  "homepage": "https://github.com/Diegoregalado0/chipwright#readme",
   "bugs": {
-    "url": "https://github.com/Diegoregalado0/openhome-studio/issues"
+    "url": "https://github.com/Diegoregalado0/chipwright/issues"
   },
   "engines": {
     "vscode": "^1.90.0"

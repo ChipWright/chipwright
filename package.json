@@ -1,9 +1,10 @@
 {
-  "name": "openhome-studio",
+  "name": "chipwright",
   "version": "0.0.0",
   "private": true,
   "description": "Source-available development platform for smart-home and IoT devices",
   "license": "Elastic-2.0",
+  "author": "Diego Regalado (https://github.com/Diegoregalado0)",
   "packageManager": "pnpm@11.1.2",
   "engines": {
     "node": ">=22"
