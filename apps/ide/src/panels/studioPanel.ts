@@ -430,6 +430,18 @@ export class StudioPanel {
     if (existsSync(binPath)) {
       return binPath;
     }
+    // The twin is the OpenHome digital-twin C program, which lives in the OpenHome Studio
+    // repository. In any other workspace there is nothing to build, so say so plainly rather
+    // than surface a raw make error. The Designer and artifact generation work anywhere; the
+    // Twin debugger needs this source tree.
+    if (!existsSync(join(root, TWIN_SOURCE_DIR))) {
+      this.post({
+        type: "twinError",
+        message:
+          "The Twin debugger runs the OpenHome digital twin, which is part of the OpenHome Studio source workspace. Open that workspace to use it.",
+      });
+      return null;
+    }
     this.post({ type: "twinStatus", message: "Building the twin binary..." });
     try {
       await buildTwin(join(root, TWIN_SOURCE_DIR));
