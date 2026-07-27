@@ -1,6 +1,6 @@
 # Chipwright
 
-[![CI](https://github.com/Diegoregalado0/chipwright/actions/workflows/ci.yml/badge.svg)](https://github.com/Diegoregalado0/chipwright/actions/workflows/ci.yml)
+[![CI](https://github.com/ChipWright/chipwright/actions/workflows/ci.yml/badge.svg)](https://github.com/ChipWright/chipwright/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Elastic--2.0%20%2B%20Apache--2.0-blue.svg)](LICENSING.md)
 
 **Build a production smart device from a single definition, and it's free.**
@@ -70,7 +70,7 @@ Requirements: **Node.js >= 22**, **pnpm >= 11** (`corepack enable`), and a **C t
 Debian/Ubuntu).
 
 ```sh
-git clone https://github.com/Diegoregalado0/chipwright.git
+git clone https://github.com/ChipWright/chipwright.git
 cd chipwright
 pnpm install
 pnpm -r build        # build every package

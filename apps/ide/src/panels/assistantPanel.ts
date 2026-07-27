@@ -358,9 +358,9 @@ export class AssistantPanel {
     const mediaRoot = vscode.Uri.joinPath(this.context.extensionUri, "media");
     const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "assistant.js"));
     const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "assistant.css"));
+    const logoUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, "icon.png"));
     const nonce = createNonce();
-    const home =
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M10 2v3m4-3v3m-4 14v3m4-3v3M2 10h3m-3 4h3m14-4h3m-3 4h3"/></svg>';
+    const home = `<img class="glyph-img" src="${logoUri.toString()}" alt="">`;
 
     return `<!DOCTYPE html>
 <html lang="en">

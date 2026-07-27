@@ -48,6 +48,12 @@ body {
   height: 18px;
   color: var(--accent);
 }
+.wordmark .glyph-img {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  display: block;
+}
 .wordmark svg {
   width: 18px;
   height: 18px;

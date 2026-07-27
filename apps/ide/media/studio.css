@@ -56,6 +56,7 @@ input, select { font-family: inherit; font-size: 13px; }
 .wordmark { display: flex; align-items: center; gap: var(--s2); }
 .wordmark .glyph { color: var(--accent-strong); display: grid; place-items: center; }
 .wordmark .glyph svg { width: 18px; height: 18px; }
+.wordmark .glyph-img { width: 20px; height: 20px; border-radius: 5px; display: block; }
 .wordmark b { font-weight: 650; letter-spacing: 0.01em; color: var(--fg-strong); }
 .context { display: flex; align-items: center; gap: var(--s3); flex: 1 1 160px; min-width: 0; }
 .context .sep { color: var(--fg-muted); opacity: 0.5; }
