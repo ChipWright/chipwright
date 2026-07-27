@@ -13,7 +13,9 @@
 //   GET  /firmware/:type/:version     fetch a signed build manifest
 //   GET  /firmware/:type/:version/artifact  download the raw firmware bytes for OTA
 
-import { createServer, type IncomingMessage, type Server } from "node:http";
+import { timingSafeEqual } from "node:crypto";
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import { createServer as createHttpsServer, type Server as HttpsServer } from "node:https";
 import type { RolloutOptions } from "./ota.js";
 import type { RegisterDeviceInput } from "./registry.js";
 import type { CloudService } from "./service.js";
@@ -36,6 +38,99 @@ type Response = JsonResponse | BinaryResponse;
 
 function isBinaryResponse(response: Response): response is BinaryResponse {
   return "bytes" in response;
+}
+
+// Bearer-token authorization. Routes fall into three scopes. Public routes (the CA
+// public key) need no token. Device routes (telemetry ingest, command drain, firmware
+// download) accept the device token or the admin token. Admin routes (everything else:
+// registration, provisioning, sending commands, publishing firmware, rollouts) require
+// the admin token. When no token is configured for a scope the server runs that scope
+// open, which keeps local development and the existing tests dependency-free; production
+// deployments set both tokens.
+type Scope = "public" | "device" | "admin";
+
+export interface AuthConfig {
+  adminToken?: string;
+  deviceToken?: string;
+}
+
+export interface TlsConfig {
+  cert: string | Buffer;
+  key: string | Buffer;
+}
+
+export interface CloudServerOptions {
+  adminToken?: string;
+  deviceToken?: string;
+  tls?: TlsConfig;
+}
+
+function scopeFor(method: string | undefined, parts: string[]): Scope {
+  if (parts[0] === "ca") {
+    return "public";
+  }
+  if (parts[0] === "firmware") {
+    // Devices download builds and artifacts (GET); publishing a build (POST) is admin.
+    return method === "GET" ? "device" : "admin";
+  }
+  if (parts[0] === "devices" && parts.length >= 2) {
+    const sub = parts[2];
+    if (sub === "telemetry" && method === "POST") {
+      return "device";
+    }
+    if (sub === "commands" && method === "GET") {
+      return "device";
+    }
+    return "admin";
+  }
+  return "admin";
+}
+
+function bearerToken(req: IncomingMessage): string | undefined {
+  const header = req.headers["authorization"];
+  if (typeof header !== "string") {
+    return undefined;
+  }
+  const match = /^Bearer (.+)$/.exec(header);
+  return match?.[1];
+}
+
+// Constant-time membership check so a valid token cannot be discovered by timing. Every
+// accepted value is compared regardless of an early match.
+function tokenAccepted(candidate: string, accepted: readonly string[]): boolean {
+  const candidateBuf = Buffer.from(candidate);
+  let ok = false;
+  for (const value of accepted) {
+    const valueBuf = Buffer.from(value);
+    if (valueBuf.length === candidateBuf.length && timingSafeEqual(candidateBuf, valueBuf)) {
+      ok = true;
+    }
+  }
+  return ok;
+}
+
+function authorize(auth: AuthConfig, scope: Scope, req: IncomingMessage): JsonResponse | null {
+  if (scope === "public") {
+    return null;
+  }
+  const accepted: string[] = [];
+  if (scope === "device" && auth.deviceToken !== undefined) {
+    accepted.push(auth.deviceToken);
+  }
+  if (auth.adminToken !== undefined) {
+    accepted.push(auth.adminToken);
+  }
+  if (accepted.length === 0) {
+    return null;
+  }
+  const token = bearerToken(req);
+  if (token === undefined) {
+    return { status: 401, body: { error: "authorization required" } };
+  }
+  if (!tokenAccepted(token, accepted)) {
+    return { status: 403, body: { error: "forbidden" } };
+  }
+  return null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -271,9 +366,14 @@ async function routeRollouts(
   return { status: 404, body: { error: "unknown route" } };
 }
 
-async function route(service: CloudService, req: IncomingMessage): Promise<Response> {
+async function route(service: CloudService, req: IncomingMessage, auth: AuthConfig): Promise<Response> {
   const url = new URL(req.url ?? "/", "http://localhost");
   const parts = url.pathname.split("/").filter((part) => part.length > 0);
+
+  const denied = authorize(auth, scopeFor(req.method, parts), req);
+  if (denied !== null) {
+    return denied;
+  }
 
   if (parts.length === 1 && parts[0] === "ca" && req.method === "GET") {
     return { status: 200, body: { caPublicKeyPem: service.caPublicKeyPem } };
@@ -296,9 +396,19 @@ async function route(service: CloudService, req: IncomingMessage): Promise<Respo
   return { status: 404, body: { error: "unknown route" } };
 }
 
-export function createCloudServer(service: CloudService): Server {
-  return createServer((req, res) => {
-    route(service, req)
+export function createCloudServer(
+  service: CloudService,
+  options: CloudServerOptions = {},
+): Server | HttpsServer {
+  const auth: AuthConfig = {};
+  if (options.adminToken !== undefined) {
+    auth.adminToken = options.adminToken;
+  }
+  if (options.deviceToken !== undefined) {
+    auth.deviceToken = options.deviceToken;
+  }
+  const handler = (req: IncomingMessage, res: ServerResponse): void => {
+    route(service, req, auth)
       .then((result) => {
         if (isBinaryResponse(result)) {
           res.writeHead(result.status, { "content-type": result.contentType });
@@ -313,5 +423,8 @@ export function createCloudServer(service: CloudService): Server {
         res.writeHead(500, { "content-type": "application/json" });
         res.end(JSON.stringify({ error: message }));
       });
-  });
+  };
+  return options.tls !== undefined
+    ? createHttpsServer({ cert: options.tls.cert, key: options.tls.key }, handler)
+    : createServer(handler);
 }

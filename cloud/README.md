@@ -34,7 +34,9 @@ GET  /devices/:id/shadow            fetch the device shadow
 POST /devices/:id/commands          queue a command
 GET  /devices/:id/commands          drain queued commands
 POST /firmware                      publish a signed build (verified before it is stored)
+GET  /firmware/:deviceType/latest   fetch the newest build manifest for a device type
 GET  /firmware/:deviceType/:version fetch a build manifest
+GET  /firmware/:deviceType/:version/artifact  download the raw firmware bytes for OTA
 POST /rollouts                      create a staged rollout campaign
 GET  /rollouts/:id                  fetch rollout status
 POST /rollouts/:id/next-batch       offer the next batch the update
@@ -44,6 +46,31 @@ POST /rollouts/:id/report           report a device outcome (applied or failed)
 Firmware endpoints require a signing trust anchor, passed as the second argument to
 `CloudService`. Without one, publishing reports that the trust anchor is not configured.
 
+## Authentication and TLS
+
+Routes fall into three scopes:
+
+- **Public**: `GET /ca` needs no token.
+- **Device**: telemetry ingest, command drain, and firmware download. Accepts the device
+  token or the admin token.
+- **Admin**: everything else, including registration, provisioning, sending commands,
+  publishing firmware, and rollouts. Requires the admin token.
+
+Configure tokens and TLS through the environment when serving:
+
+```sh
+OPENHOME_ADMIN_TOKEN=... OPENHOME_DEVICE_TOKEN=... \
+OPENHOME_TLS_CERT=/path/fullchain.pem OPENHOME_TLS_KEY=/path/key.pem \
+PORT=8443 pnpm --filter @openhome/cloud serve
+```
+
+Callers present the token as `Authorization: Bearer <token>`. Tokens are compared in
+constant time. When a scope has no token configured it runs open, which keeps local
+development frictionless; the server warns at startup if the admin token is unset. When a
+TLS certificate and key are both provided the server listens over HTTPS, so OTA artifacts
+and provisioning secrets travel encrypted in production. `createCloudServer(service,
+options)` accepts the same `adminToken`, `deviceToken`, and `tls` fields directly.
+
 ## Running
 
 ```sh
@@ -51,8 +78,10 @@ pnpm --filter @openhome/cloud test
 PORT=8080 pnpm --filter @openhome/cloud serve
 ```
 
+State persists to a JSON file (`OPENHOME_CLOUD_STATE`, default
+`~/.openhome/cloud-state.json`) so the server resumes across restarts.
+
 ## Not yet implemented
 
 - Secure boot enforcement on the device side (needs hardware)
-- Durable storage; state is currently in memory
-- Authentication of the HTTP callers themselves
+- Per-caller identities and revocation; tokens are currently shared secrets

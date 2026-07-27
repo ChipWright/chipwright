@@ -100,5 +100,7 @@ pnpm --filter @openhome/cloud firmware pubkey-c ~/.openhome/firmware-signing.key
   stale CMake cache does not carry a version across builds.
 - A persistently failing "latest" produces an update/rollback loop on a lone device; a fleet
   rollout halts after the failure threshold (`RolloutCampaign`), which is the cloud's role.
-- Uses HTTP on the local network for the demo. Production delivery should use HTTPS; the
-  signature check makes the image itself tamper-evident regardless of transport.
+- Uses HTTP on the local network for the demo. Production delivery should use HTTPS, which
+  the cloud serves when `OPENHOME_TLS_CERT` and `OPENHOME_TLS_KEY` are set (see
+  `cloud/README.md`); the signature check makes the image itself tamper-evident regardless
+  of transport.
