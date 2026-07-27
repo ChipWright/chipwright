@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-// The assistant command line. Two grounded subcommands:
-//   ask "<prompt>" [--device <path>] [--apply]   evolve a device manifest (DDL)
-//   bsp "<chip>"   [--out <dir>]    [--apply]     draft a board support package (firmware)
+// The assistant command line. Three grounded subcommands:
+//   ask      "<prompt>" [--device <path>] [--apply]   evolve a device manifest (DDL)
+//   bsp      "<chip>"   [--out <dir>]     [--apply]    draft a board support package (firmware)
+//   firmware "<task>"   --device <path> [--out <dir>] [--apply]   write device logic
 // It loads the bring-your-own-key configuration from the environment, runs the grounded
 // agent, and shows the result. Applying is the human-in-the-loop step: nothing is written
 // unless --apply is passed.
@@ -12,6 +13,7 @@ import { loadConfigFromEnv, ConfigError } from "./config.js";
 import { providerFromConfig, ProviderError } from "./providers/index.js";
 import { defaultTools, type ToolContext } from "./tools.js";
 import { bspTools, BSP_SYSTEM_PROMPT, type BspToolContext } from "./bsp.js";
+import { firmwareTools, FIRMWARE_SYSTEM_PROMPT, type FirmwareToolContext } from "./firmware.js";
 import { runAgent } from "./agent.js";
 import { renderDiff } from "./diff.js";
 import { mergeManifestComments } from "./merge.js";
@@ -57,6 +59,7 @@ const USAGE = `openhome-assist - AI development assistant
 Usage:
   openhome-assist ask "<prompt>" [--device <path>] [--apply] [--max-steps <n>]
   openhome-assist bsp "<chip or board>" [--out <dir>] [--apply] [--max-steps <n>]
+  openhome-assist firmware "<task>" --device <path> [--out <dir>] [--apply] [--max-steps <n>]
 
 Configuration (environment):
   OPENHOME_LLM_PROVIDER   anthropic | gemini | openai-compatible (default anthropic)
@@ -65,7 +68,8 @@ Configuration (environment):
   OPENHOME_LLM_BASE_URL   endpoint for openai-compatible (e.g. http://localhost:11434/v1)
 
 ask proposes a manifest, shown as a diff; re-run with --apply to write it to --device.
-bsp drafts a board support package, verified to compile; re-run with --apply to write it to --out.`;
+bsp drafts a board support package, verified to compile; re-run with --apply to write it to --out.
+firmware writes device logic against a device's generated interface, verified to compile; re-run with --apply to write it to --out.`;
 
 async function runAsk(args: Args, config: ReturnType<typeof loadConfigFromEnv>): Promise<number> {
   const provider = providerFromConfig(config);
@@ -148,15 +152,70 @@ async function runBsp(args: Args, config: ReturnType<typeof loadConfigFromEnv>):
   return 0;
 }
 
+async function runFirmware(args: Args, config: ReturnType<typeof loadConfigFromEnv>): Promise<number> {
+  if (args.device === undefined) {
+    console.error("firmware requires --device <path> to a device manifest.");
+    return 1;
+  }
+  const manifestYaml = await readFile(args.device, "utf8").catch(() => "");
+  if (manifestYaml.length === 0) {
+    console.error(`could not read the device manifest at ${args.device}`);
+    return 1;
+  }
+  const provider = providerFromConfig(config);
+  const sdkFirmwareDir = resolve(process.cwd(), "sdk/firmware");
+  const context: FirmwareToolContext = { proposals: [], sdkFirmwareDir, manifestYaml };
+
+  const result = await runAgent({
+    provider,
+    tools: firmwareTools(),
+    context,
+    messages: [{ role: "user", content: `Write firmware for this device to: ${args.prompt}` }],
+    model: config.model,
+    system: FIRMWARE_SYSTEM_PROMPT,
+    ...(args.maxSteps !== undefined ? { maxSteps: args.maxSteps } : {}),
+  });
+
+  console.log(result.answer);
+
+  const outDir = args.out ?? join(dirname(args.device), "firmware");
+  for (const proposal of result.proposals) {
+    console.log(`\n--- proposed firmware ---`);
+    console.log(proposal.summary);
+    console.log(`compiles cleanly against the device interface, ${proposal.files.length} file(s):`);
+    for (const file of proposal.files) {
+      console.log(`  ${file.path}`);
+    }
+    if (args.apply) {
+      for (const file of proposal.files) {
+        const target = join(outDir, file.path);
+        await mkdir(dirname(target), { recursive: true });
+        await writeFile(target, file.content, "utf8");
+      }
+      console.log(`\napplied to ${outDir}`);
+    } else {
+      console.log(`\nre-run with --apply to write these files to ${outDir}`);
+    }
+  }
+  return 0;
+}
+
 async function main(): Promise<number> {
   const args = parseArgs(process.argv.slice(2));
-  if ((args.command !== "ask" && args.command !== "bsp") || args.prompt.length === 0) {
+  const commands = new Set(["ask", "bsp", "firmware"]);
+  if (!commands.has(args.command) || args.prompt.length === 0) {
     console.log(USAGE);
     return args.command === "help" ? 0 : 1;
   }
 
   const config = loadConfigFromEnv();
-  return args.command === "bsp" ? runBsp(args, config) : runAsk(args, config);
+  if (args.command === "bsp") {
+    return runBsp(args, config);
+  }
+  if (args.command === "firmware") {
+    return runFirmware(args, config);
+  }
+  return runAsk(args, config);
 }
 
 main()

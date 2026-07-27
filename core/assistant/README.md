@@ -54,6 +54,23 @@ be surfaced. This is the firmware counterpart of `propose_device`.
 - `compile_bsp` — compile a draft against the real HAL and return the compiler output
 - `propose_bsp` — the gate: only a BSP that compiles is recorded
 
+## Writing device firmware
+
+The same grounded loop helps a developer write the device logic that runs on top of a
+device's generated interface: implement the capability prototypes, add control behavior,
+and wire it to the SDK. The grounding is a real compile against **this device's** generated
+interface plus the SDK headers, so `propose_firmware` refuses any code that does not build
+with the repository's flags (including `-Werror`). A model cannot surface firmware that
+would not compile, exactly as `propose_device` and `propose_bsp`.
+
+- `read_device_interface` — the capability prototypes generated from the device manifest
+  (`oh_<key>_read`, `oh_<key>_set_mode`), the exact seam the firmware implements
+- `read_hal_interface` — the SDK and HAL headers the firmware calls
+- `read_reference_firmware` — the starter firmware scaffolded for this exact device, as a
+  worked example to model changes on
+- `compile_firmware` — compile a draft against the device interface and the SDK
+- `propose_firmware` — the gate: only firmware that compiles is recorded
+
 ## Command line
 
 ```sh
@@ -80,6 +97,15 @@ shown only if it compiles; re-run with `--apply` to write it under `sdk/firmware
 ```sh
 node core/assistant/dist/cli.js bsp "STM32U5 with an on-die temperature sensor"
 node core/assistant/dist/cli.js bsp "STM32U5 ..." --apply
+```
+
+Write device logic against a device's generated interface. The draft is shown only if it
+compiles; re-run with `--apply` to write it under the device's `firmware/` directory:
+
+```sh
+node core/assistant/dist/cli.js firmware "hold 21C: turn hvac to heating below setpoint, cooling above" \
+  --device examples/thermostat/device.yaml
+node core/assistant/dist/cli.js firmware "..." --device examples/thermostat/device.yaml --apply
 ```
 
 ## Privacy

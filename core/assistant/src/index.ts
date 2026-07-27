@@ -22,6 +22,12 @@ export {
   type BspProposal,
   type BspToolContext,
 } from "./bsp.js";
+export {
+  firmwareTools,
+  FIRMWARE_SYSTEM_PROMPT,
+  type FirmwareProposal,
+  type FirmwareToolContext,
+} from "./firmware.js";
 export { compileBsp, type BspFile, type BspCompileResult } from "./bsp-compile.js";
 export { renderDiff } from "./diff.js";
 export { mergeManifestComments } from "./merge.js";
