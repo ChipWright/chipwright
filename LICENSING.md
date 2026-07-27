@@ -1,11 +1,11 @@
 # Licensing
 
-OpenHome Studio is **free to use** and split across two licenses along a deliberate line:
+Chipwright is **free to use** and split across two licenses along a deliberate line:
 the **service** you build on, and the **silicon** the community extends.
 
 ## The service: Elastic License 2.0
 
-Everything except the firmware tree is the OpenHome service: the Device Definition Language
+Everything except the firmware tree is the Chipwright service: the Device Definition Language
 and its compiler, the generators, the digital twin, the cloud, the marketplace, the AI
 assistant, and the IDE. It is licensed under the [Elastic License 2.0](LICENSE).
 

@@ -1,7 +1,7 @@
 # ESP32-C6 Matter target
 
 The `smart_thermostat` as a real **Matter-over-Wi-Fi** device on the ESP32-C6. It exposes a
-Matter Temperature Measurement endpoint whose value is fed from the OpenHome HAL (the chip's
+Matter Temperature Measurement endpoint whose value is fed from the Chipwright HAL (the chip's
 on-die temperature sensor), so the Matter device runs the same
 `manifest -> generated interface -> SDK + HAL` path as the twin and the plain telemetry
 firmware. Verified end to end: the device commissions onto a Matter fabric and answers

@@ -13,7 +13,7 @@ as a **VS Code extension** over the shell-agnostic studio core.
   regenerable; the scaffold is yours to edit and is never overwritten.
 - **AI Assistant** (`Open AI Assistant` from the Devices view) — a chat panel over
   `core/assistant`. It is bring-your-own-key (provider and model in settings under
-  `openhome.assistant`; the API key is stored in VS Code secret storage, never in settings
+  `chipwright.assistant`; the API key is stored in VS Code secret storage, never in settings
   or the webview). It proposes DDL edits as a diff, checked against the compiler first, and
   applies them to the device manifest only when you click Apply, preserving comments.
 

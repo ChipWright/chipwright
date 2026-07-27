@@ -1,17 +1,17 @@
 // Command-line entry point for the device engine.
 //
-//   openhome validate <manifest>
-//   openhome compile  <manifest> --out <dir>
+//   chipwright validate <manifest>
+//   chipwright compile  <manifest> --out <dir>
 
 import { compile, writeArtifacts } from "./compile.js";
 import { loadManifestFile } from "./parse.js";
 import type { Diagnostic } from "./schema.js";
 
-const USAGE = `openhome - OpenHome Studio device engine
+const USAGE = `chipwright - Chipwright device engine
 
 Usage:
-  openhome validate <manifest>
-  openhome compile  <manifest> --out <dir>
+  chipwright validate <manifest>
+  chipwright compile  <manifest> --out <dir>
 `;
 
 function printDiagnostics(diagnostics: readonly Diagnostic[]): void {

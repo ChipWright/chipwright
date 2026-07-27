@@ -1,6 +1,6 @@
 # AI Development Assistant
 
-Provider-agnostic AI assistant for OpenHome Studio (branch 11, Phase 6): a tool-using agent
+Provider-agnostic AI assistant for Chipwright (branch 11, Phase 6): a tool-using agent
 that helps engineers understand, diagnose, and evolve device definitions. Its suggestions
 are **grounded** — checked against the real DDL compiler before they reach you — and
 applying any change is always a human-in-the-loop step.
@@ -19,15 +19,15 @@ formats are supported natively:
 Configuration comes from the environment:
 
 ```
-OPENHOME_LLM_PROVIDER   anthropic | gemini | openai-compatible   (default anthropic)
-OPENHOME_LLM_API_KEY    your key (omit only when using a local base URL)
-OPENHOME_LLM_MODEL      model id (a sensible per-provider default otherwise)
-OPENHOME_LLM_BASE_URL   endpoint for openai-compatible, e.g. http://localhost:11434/v1
+CHIPWRIGHT_LLM_PROVIDER   anthropic | gemini | openai-compatible   (default anthropic)
+CHIPWRIGHT_LLM_API_KEY    your key (omit only when using a local base URL)
+CHIPWRIGHT_LLM_MODEL      model id (a sensible per-provider default otherwise)
+CHIPWRIGHT_LLM_BASE_URL   endpoint for openai-compatible, e.g. http://localhost:11434/v1
 ```
 
 ## What it does
 
-The agent runs a set of tools over the platform, each grounded in `@openhome/studio-core`:
+The agent runs a set of tools over the platform, each grounded in `@chipwright/studio-core`:
 
 - `read_device` — read a manifest from disk
 - `validate_manifest` — validate YAML against the DDL and return diagnostics
@@ -64,7 +64,7 @@ with the repository's flags (including `-Werror`). A model cannot surface firmwa
 would not compile, exactly as `propose_device` and `propose_bsp`.
 
 - `read_device_interface` — the capability prototypes generated from the device manifest
-  (`oh_<key>_read`, `oh_<key>_set_mode`), the exact seam the firmware implements
+  (`cw_<key>_read`, `cw_<key>_set_mode`), the exact seam the firmware implements
 - `read_hal_interface` — the SDK and HAL headers the firmware calls
 - `read_reference_firmware` — the starter firmware scaffolded for this exact device, as a
   worked example to model changes on
@@ -74,8 +74,8 @@ would not compile, exactly as `propose_device` and `propose_bsp`.
 ## Command line
 
 ```sh
-export OPENHOME_LLM_PROVIDER=anthropic
-export OPENHOME_LLM_API_KEY=sk-...
+export CHIPWRIGHT_LLM_PROVIDER=anthropic
+export CHIPWRIGHT_LLM_API_KEY=sk-...
 node dist/cli.js ask "add a humidity sensor and make it battery powered" \
   --device examples/thermostat/device.yaml
 # review the diff, then:
@@ -85,9 +85,9 @@ node dist/cli.js ask "..." --device examples/thermostat/device.yaml --apply
 Point it at a local model instead (no key needed):
 
 ```sh
-export OPENHOME_LLM_PROVIDER=openai-compatible
-export OPENHOME_LLM_BASE_URL=http://localhost:11434/v1
-export OPENHOME_LLM_MODEL=llama3.1
+export CHIPWRIGHT_LLM_PROVIDER=openai-compatible
+export CHIPWRIGHT_LLM_BASE_URL=http://localhost:11434/v1
+export CHIPWRIGHT_LLM_MODEL=llama3.1
 node dist/cli.js ask "explain what this device does" --device examples/thermostat/device.yaml
 ```
 
@@ -117,7 +117,7 @@ can be `localhost` for a fully private local model.
 ## Running
 
 ```sh
-pnpm --filter @openhome/assistant test
+pnpm --filter @chipwright/assistant test
 ```
 
 The full agent loop and every provider adapter are tested with a scripted mock provider and

@@ -1,18 +1,18 @@
-#include "openhome/sim.h"
+#include "chipwright/sim.h"
 
-static oh_status_t source_read(void *ctx, float *out_value) {
-  oh_sim_source_t *source = ctx;
+static cw_status_t source_read(void *ctx, float *out_value) {
+  cw_sim_source_t *source = ctx;
   source->value += source->step;
   *out_value = source->value;
-  return OH_OK;
+  return CW_OK;
 }
 
-void oh_sim_source_init(oh_sim_source_t *source, float initial, float step) {
+void cw_sim_source_init(cw_sim_source_t *source, float initial, float step) {
   source->value = initial;
   source->step = step;
 }
 
-oh_sensor_driver_t oh_sim_source_driver(oh_sim_source_t *source) {
-  const oh_sensor_driver_t driver = {.read = source_read, .ctx = source};
+cw_sensor_driver_t cw_sim_source_driver(cw_sim_source_t *source) {
+  const cw_sensor_driver_t driver = {.read = source_read, .ctx = source};
   return driver;
 }

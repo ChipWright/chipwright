@@ -1,4 +1,4 @@
-// AI-assisted BSP drafting. A board support package maps the OpenHome HAL capability traits
+// AI-assisted BSP drafting. A board support package maps the Chipwright HAL capability traits
 // to a chip's drivers; contributing one is how the community adds hardware. These tools help
 // draft a BSP for a new board and, crucially, ground the draft: read the exact HAL interface
 // and a reference BSP, and compile the draft against the real headers before it is surfaced.
@@ -69,11 +69,11 @@ const readHalInterface: Tool<BspToolContext> = {
   schema: {
     name: "read_hal_interface",
     description:
-      "Read the OpenHome HAL and SDK headers a BSP must implement (hal.h and sdk.h). Read this first.",
+      "Read the Chipwright HAL and SDK headers a BSP must implement (hal.h and sdk.h). Read this first.",
     parameters: { type: "object", properties: {} },
   },
   handler: async (_args, context) => {
-    const dir = join(context.sdkFirmwareDir, "include", "openhome");
+    const dir = join(context.sdkFirmwareDir, "include", "chipwright");
     const [sdk, hal] = await Promise.all([
       readFile(join(dir, "sdk.h"), "utf8"),
       readFile(join(dir, "hal.h"), "utf8"),
@@ -169,9 +169,9 @@ const proposeBsp: Tool<BspToolContext> = {
   },
 };
 
-export const BSP_SYSTEM_PROMPT = `You are the OpenHome hardware enablement assistant. You help a contributor draft a board support package (BSP) that brings a new chip or board to the OpenHome firmware SDK.
+export const BSP_SYSTEM_PROMPT = `You are the Chipwright hardware enablement assistant. You help a contributor draft a board support package (BSP) that brings a new chip or board to the Chipwright firmware SDK.
 
-A BSP implements the HAL: it registers sensor and actuator drivers with oh_hal_register_sensor / oh_hal_register_actuator, backed by the chip's peripherals, and exposes a single oh_<board>_bsp_register(void) entry point. Nothing above the HAL knows the chip.
+A BSP implements the HAL: it registers sensor and actuator drivers with cw_hal_register_sensor / cw_hal_register_actuator, backed by the chip's peripherals, and exposes a single cw_<board>_bsp_register(void) entry point. Nothing above the HAL knows the chip.
 
 Rules:
 - Ground everything in the tools. Call read_hal_interface first to see the exact functions and types to implement, and read_reference_bsp to model your work on an existing BSP.

@@ -1,5 +1,5 @@
 {
-  "schema": "openhome-board-conformance/1",
+  "schema": "chipwright-board-conformance/1",
   "chip": "esp32-c6",
   "bsp": "esp32",
   "deviceClass": "thermostat",

@@ -1,5 +1,5 @@
 // Matter firmware for the smart_thermostat on ESP32-C6. It exposes a Matter Temperature
-// Measurement endpoint whose MeasuredValue is fed from the OpenHome HAL (the chip's on-die
+// Measurement endpoint whose MeasuredValue is fed from the Chipwright HAL (the chip's on-die
 // temperature sensor), so the Matter device is driven by the same manifest -> generated
 // interface -> SDK + HAL path the digital twin and the plain telemetry firmware use. The
 // device commissions over Wi-Fi; use a Matter commissioner (chip-tool, Apple Home, etc.).
@@ -17,14 +17,14 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/timers.h>
 
-// The OpenHome SDK and BSP are C; wrap their headers so this C++ app links against them.
+// The Chipwright SDK and BSP are C; wrap their headers so this C++ app links against them.
 extern "C" {
-#include "openhome/hal.h"
-#include "openhome/sdk.h"
+#include "chipwright/hal.h"
+#include "chipwright/sdk.h"
 #include "esp32_bsp.h"
 }
 
-static const char *TAG = "openhome.matter";
+static const char *TAG = "chipwright.matter";
 
 using namespace esp_matter;
 using namespace esp_matter::endpoint;
@@ -37,7 +37,7 @@ static uint16_t s_temperature_endpoint_id = 0;
 // the update is marshalled there.
 static void report_temperature(TimerHandle_t /*timer*/) {
   float celsius = 0.0f;
-  if (oh_hal_read_sensor("temperature_sensor", &celsius) != OH_OK) {
+  if (cw_hal_read_sensor("temperature_sensor", &celsius) != CW_OK) {
     return;
   }
   const int16_t measured = static_cast<int16_t>(celsius * 100.0f);
@@ -88,7 +88,7 @@ extern "C" void app_main(void) {
 
   // Register the on-die temperature sensor through the HAL, so the Matter cluster is fed by
   // the same path the twin uses.
-  if (oh_esp32_bsp_register() != OH_OK) {
+  if (cw_esp32_bsp_register() != CW_OK) {
     ESP_LOGE(TAG, "failed to register board support");
     return;
   }
@@ -115,8 +115,8 @@ extern "C" void app_main(void) {
   }
 
   // Report the on-die temperature into the cluster every two seconds.
-  TimerHandle_t timer = xTimerCreate("oh_temp", pdMS_TO_TICKS(2000), pdTRUE, nullptr, report_temperature);
+  TimerHandle_t timer = xTimerCreate("cw_temp", pdMS_TO_TICKS(2000), pdTRUE, nullptr, report_temperature);
   xTimerStart(timer, 0);
 
-  ESP_LOGI(TAG, "openhome matter thermostat started; commission with the setup code");
+  ESP_LOGI(TAG, "chipwright matter thermostat started; commission with the setup code");
 }

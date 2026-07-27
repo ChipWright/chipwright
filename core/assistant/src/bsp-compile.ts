@@ -63,7 +63,7 @@ export async function compileBsp(
 
   const sdkInclude = join(options.sdkFirmwareDir ?? DEFAULT_SDK_FIRMWARE, "include");
   const cc = options.cc ?? process.env["CC"] ?? "cc";
-  const dir = mkdtempSync(join(tmpdir(), "openhome-bsp-"));
+  const dir = mkdtempSync(join(tmpdir(), "chipwright-bsp-"));
   try {
     for (const file of files) {
       const full = join(dir, file.path);

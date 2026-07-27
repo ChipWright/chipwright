@@ -1,6 +1,6 @@
 name: Publish extension
 
-# Publishes the OpenHome Studio VS Code extension. Trigger by pushing a tag that matches the
+# Publishes the Chipwright VS Code extension. Trigger by pushing a tag that matches the
 # extension version, e.g. ide-v0.1.0 (the tag suffix must equal apps/ide/package.json version).
 # workflow_dispatch runs the same steps and can package without publishing (dry_run) to rehearse.
 on:
@@ -84,6 +84,6 @@ jobs:
         working-directory: apps/ide
         run: |
           gh release create "$GITHUB_REF_NAME" openhome-studio.vsix \
-            --title "OpenHome Studio $GITHUB_REF_NAME" \
-            --notes "OpenHome Studio VS Code extension $GITHUB_REF_NAME" \
+            --title "Chipwright $GITHUB_REF_NAME" \
+            --notes "Chipwright VS Code extension $GITHUB_REF_NAME" \
           || gh release upload "$GITHUB_REF_NAME" openhome-studio.vsix --clobber

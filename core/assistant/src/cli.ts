@@ -54,18 +54,18 @@ function parseArgs(argv: string[]): Args {
   return args;
 }
 
-const USAGE = `openhome-assist - AI development assistant
+const USAGE = `chipwright-assist - AI development assistant
 
 Usage:
-  openhome-assist ask "<prompt>" [--device <path>] [--apply] [--max-steps <n>]
-  openhome-assist bsp "<chip or board>" [--out <dir>] [--apply] [--max-steps <n>]
-  openhome-assist firmware "<task>" --device <path> [--out <dir>] [--apply] [--max-steps <n>]
+  chipwright-assist ask "<prompt>" [--device <path>] [--apply] [--max-steps <n>]
+  chipwright-assist bsp "<chip or board>" [--out <dir>] [--apply] [--max-steps <n>]
+  chipwright-assist firmware "<task>" --device <path> [--out <dir>] [--apply] [--max-steps <n>]
 
 Configuration (environment):
-  OPENHOME_LLM_PROVIDER   anthropic | gemini | openai-compatible (default anthropic)
-  OPENHOME_LLM_API_KEY    your API key (omit only for a local base URL)
-  OPENHOME_LLM_MODEL      model id (provider default otherwise)
-  OPENHOME_LLM_BASE_URL   endpoint for openai-compatible (e.g. http://localhost:11434/v1)
+  CHIPWRIGHT_LLM_PROVIDER   anthropic | gemini | openai-compatible (default anthropic)
+  CHIPWRIGHT_LLM_API_KEY    your API key (omit only for a local base URL)
+  CHIPWRIGHT_LLM_MODEL      model id (provider default otherwise)
+  CHIPWRIGHT_LLM_BASE_URL   endpoint for openai-compatible (e.g. http://localhost:11434/v1)
 
 ask proposes a manifest, shown as a diff; re-run with --apply to write it to --device.
 bsp drafts a board support package, verified to compile; re-run with --apply to write it to --out.

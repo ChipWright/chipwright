@@ -7,7 +7,7 @@ Phase 2). Matter is the primary target; Thread, Bluetooth LE, WiFi, and legacy a
 ## What works today
 
 - Simulated network transport with deterministic, seedable packet loss
-  (`oh_sim_transport_t`)
+  (`cw_sim_transport_t`)
 - Simulated Matter commissioning that retries per step over a lossy link, so a device
   survives packet loss or fails cleanly when the link is dead
 - Capability to Matter cluster mapping (for example `temperature_sensor` maps to the
@@ -15,7 +15,7 @@ Phase 2). Matter is the primary target; Thread, Bluetooth LE, WiFi, and legacy a
 
 ## Layout
 
-- `include/openhome/protocol.h` — protocol API
+- `include/chipwright/protocol.h` — protocol API
 - `src/transport_sim.c` — simulated lossy transport
 - `src/matter.c` — commissioning and cluster mapping
 - `tests/` — unit tests, with packet loss seeded for determinism

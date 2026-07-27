@@ -1,6 +1,6 @@
 # Adding a board
 
-This guide walks through bringing a new chip to OpenHome Studio by writing a **board support
+This guide walks through bringing a new chip to Chipwright by writing a **board support
 package** (BSP). A BSP is the only thing that knows about your silicon. Everything above it (the
 device definition, the generated firmware interface, the SDK, the twin, and the acceptance tests)
 is written against capability traits and does not change per chip.
@@ -11,7 +11,7 @@ the target in [`sdk/firmware/targets/esp32c6`](../sdk/firmware/targets/esp32c6).
 
 ## The model
 
-Device logic talks to the **Hardware Abstraction Layer** ([`sdk/firmware/include/openhome/hal.h`](../sdk/firmware/include/openhome/hal.h))
+Device logic talks to the **Hardware Abstraction Layer** ([`sdk/firmware/include/chipwright/hal.h`](../sdk/firmware/include/chipwright/hal.h))
 in terms of capability traits, not registers:
 
 - a **sensor** driver reads a scalar value, and
@@ -40,23 +40,23 @@ point to review and finish, not a substitute for the steps here.
 ## 1. Implement the drivers
 
 Create `sdk/firmware/bsp/<yourchip>/<yourchip>_bsp.c`. A sensor driver fills an output value;
-an actuator driver applies an integer mode. Return `OH_OK` on success or an `oh_status_t` error.
+an actuator driver applies an integer mode. Return `CW_OK` on success or an `cw_status_t` error.
 
 ```c
-#include "openhome/hal.h"
-#include "openhome/sdk.h"
+#include "chipwright/hal.h"
+#include "chipwright/sdk.h"
 
-static oh_status_t mychip_temperature_read(void *ctx, float *out_value) {
+static cw_status_t mychip_temperature_read(void *ctx, float *out_value) {
   (void)ctx;
   // Read your sensor here and convert to the unit the manifest declares (celsius).
   *out_value = /* ... */ 0.0f;
-  return OH_OK;
+  return CW_OK;
 }
 
-static oh_status_t mychip_hvac_set_mode(void *ctx, int mode) {
+static cw_status_t mychip_hvac_set_mode(void *ctx, int mode) {
   (void)ctx;
   // Drive your actuator here (a GPIO, a relay, a PWM channel, ...).
-  return OH_OK;
+  return CW_OK;
 }
 ```
 
@@ -66,14 +66,14 @@ Expose a single registration function that binds each driver to its capability k
 and the sensor's unit must match the device definition (`examples/thermostat/device.yaml`).
 
 ```c
-oh_status_t oh_mychip_bsp_register(void) {
-  const oh_sensor_driver_t temperature = {.read = mychip_temperature_read, .ctx = NULL};
-  oh_status_t status = oh_hal_register_sensor("temperature_sensor", "celsius", temperature);
-  if (status != OH_OK) {
+cw_status_t cw_mychip_bsp_register(void) {
+  const cw_sensor_driver_t temperature = {.read = mychip_temperature_read, .ctx = NULL};
+  cw_status_t status = cw_hal_register_sensor("temperature_sensor", "celsius", temperature);
+  if (status != CW_OK) {
     return status;
   }
-  const oh_actuator_driver_t hvac = {.set_mode = mychip_hvac_set_mode, .ctx = NULL};
-  return oh_hal_register_actuator("hvac", hvac);
+  const cw_actuator_driver_t hvac = {.set_mode = mychip_hvac_set_mode, .ctx = NULL};
+  return cw_hal_register_actuator("hvac", hvac);
 }
 ```
 
@@ -98,13 +98,13 @@ make -C sdk/firmware/bsp/<yourchip> hostcheck
 
 A target is the buildable firmware application for your chip: it registers the BSP, initializes
 the device, and runs the SDK loop. Use [`sdk/firmware/targets/esp32c6`](../sdk/firmware/targets/esp32c6)
-as the template. Its `app_main` calls `oh_<chip>_bsp_register()`, then `oh_device_init()`, then
-`oh_device_run()`. Reference the shared SDK and BSP sources by relative path so the board builds
+as the template. Its `app_main` calls `cw_<chip>_bsp_register()`, then `cw_device_init()`, then
+`cw_device_run()`. Reference the shared SDK and BSP sources by relative path so the board builds
 from the same code the twin runs. Include the generated `smart_thermostat_interface.h` and
 implement its capability prototypes by delegating to the HAL.
 
 If your chip's console supports input, wiring the SDK's serial command channel
-(`oh_command_apply`) lets the hardware-in-the-loop tests drive actuators; see the ESP32-C6
+(`cw_command_apply`) lets the hardware-in-the-loop tests drive actuators; see the ESP32-C6
 target for the pattern.
 
 ## 5. Test it
@@ -119,7 +119,7 @@ Then, with the board flashed and streaming over its serial console, run the same
 real hardware unchanged:
 
 ```sh
-OPENHOME_HIL_PORT=/dev/tty.<your-port> make -C tests/suites/thermostat run
+CHIPWRIGHT_HIL_PORT=/dev/tty.<your-port> make -C tests/suites/thermostat run
 ```
 
 The hardware-in-the-loop backend reads the telemetry stream to satisfy sensor reads and sends
@@ -133,8 +133,8 @@ board, capture the result as a board conformance record and commit it next to yo
 `sdk/firmware/bsp/<chip>/conformance/`:
 
 ```sh
-OPENHOME_HIL_PORT=/dev/tty.<your-port> make -C tests/suites/thermostat run | \
-  pnpm --filter @openhome/conformance board record \
+CHIPWRIGHT_HIL_PORT=/dev/tty.<your-port> make -C tests/suites/thermostat run | \
+  pnpm --filter @chipwright/conformance board record \
     --chip <chip> --bsp <bsp> --class thermostat \
     --commit "$(git rev-parse --short HEAD)" --toolchain <toolchain> --submitter "<you>" \
     > sdk/firmware/bsp/<chip>/conformance/thermostat-<chip>.json
@@ -144,7 +144,7 @@ A passing community record earns the `community-verified` tier; a maintainer mar
 `verified`. See the current support table with:
 
 ```sh
-pnpm --filter @openhome/conformance board list sdk/firmware/bsp
+pnpm --filter @chipwright/conformance board list sdk/firmware/bsp
 ```
 
 ## 7. Submit

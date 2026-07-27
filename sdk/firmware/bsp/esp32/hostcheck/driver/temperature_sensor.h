@@ -1,5 +1,5 @@
-#ifndef OPENHOME_HOSTCHECK_TEMPERATURE_SENSOR_H
-#define OPENHOME_HOSTCHECK_TEMPERATURE_SENSOR_H
+#ifndef CHIPWRIGHT_HOSTCHECK_TEMPERATURE_SENSOR_H
+#define CHIPWRIGHT_HOSTCHECK_TEMPERATURE_SENSOR_H
 
 #include "esp_err.h"
 
@@ -23,4 +23,4 @@ esp_err_t temperature_sensor_install(const temperature_sensor_config_t *config,
 esp_err_t temperature_sensor_enable(temperature_sensor_handle_t handle);
 esp_err_t temperature_sensor_get_celsius(temperature_sensor_handle_t handle, float *out_celsius);
 
-#endif  // OPENHOME_HOSTCHECK_TEMPERATURE_SENSOR_H
+#endif  // CHIPWRIGHT_HOSTCHECK_TEMPERATURE_SENSOR_H

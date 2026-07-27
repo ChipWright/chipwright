@@ -1,4 +1,4 @@
-// Devices view for the OpenHome activity bar. Devices are discovered two ways and merged:
+// Devices view for the Chipwright activity bar. Devices are discovered two ways and merged:
 // by convention (device.yaml or *.device.yaml anywhere in the workspace) and by explicit
 // registration when one is saved through the IDE. Registration means a device shows up the
 // moment it is saved, even under a non-conventional name or outside the workspace, and it
@@ -9,7 +9,7 @@ import * as vscode from "vscode";
 import * as path from "node:path";
 import { validate } from "@chipwright/studio-core";
 
-const KNOWN_KEY = "openhome.knownDevices";
+const KNOWN_KEY = "chipwright.knownDevices";
 
 export class DeviceTreeProvider implements vscode.TreeDataProvider<DeviceItem> {
   private readonly changed = new vscode.EventEmitter<DeviceItem | undefined | void>();
@@ -117,7 +117,7 @@ class DeviceItem extends vscode.TreeItem {
       ? new vscode.ThemeIcon("pass", new vscode.ThemeColor("testing.iconPassed"))
       : new vscode.ThemeIcon("warning", new vscode.ThemeColor("list.warningForeground"));
     this.command = {
-      command: "openhome.openDesigner",
+      command: "chipwright.openDesigner",
       title: "Open Device Designer",
       arguments: [uri],
     };

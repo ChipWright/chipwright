@@ -21,16 +21,16 @@ const GOOD_FILES: BspFile[] = [
   {
     path: "widget_bsp.h",
     content:
-      '#ifndef WIDGET_BSP_H\n#define WIDGET_BSP_H\n#include "openhome/sdk.h"\noh_status_t oh_widget_bsp_register(void);\n#endif\n',
+      '#ifndef WIDGET_BSP_H\n#define WIDGET_BSP_H\n#include "chipwright/sdk.h"\ncw_status_t cw_widget_bsp_register(void);\n#endif\n',
   },
   {
     path: "widget_bsp.c",
     content:
-      '#include "widget_bsp.h"\n#include "openhome/hal.h"\n' +
-      "static oh_status_t widget_read(void *ctx, float *out) {\n  (void)ctx;\n  *out = 42.0f;\n  return OH_OK;\n}\n" +
-      "oh_status_t oh_widget_bsp_register(void) {\n" +
-      "  const oh_sensor_driver_t s = {.read = widget_read, .ctx = NULL};\n" +
-      '  return oh_hal_register_sensor("temperature_sensor", "celsius", s);\n}\n',
+      '#include "widget_bsp.h"\n#include "chipwright/hal.h"\n' +
+      "static cw_status_t widget_read(void *ctx, float *out) {\n  (void)ctx;\n  *out = 42.0f;\n  return CW_OK;\n}\n" +
+      "cw_status_t cw_widget_bsp_register(void) {\n" +
+      "  const cw_sensor_driver_t s = {.read = widget_read, .ctx = NULL};\n" +
+      '  return cw_hal_register_sensor("temperature_sensor", "celsius", s);\n}\n',
   },
 ];
 
@@ -38,7 +38,7 @@ const BROKEN_FILES: BspFile[] = [
   {
     path: "widget_bsp.c",
     content:
-      '#include "openhome/hal.h"\noh_status_t oh_widget_bsp_register(void) {\n  return no_such_function();\n}\n',
+      '#include "chipwright/hal.h"\ncw_status_t cw_widget_bsp_register(void) {\n  return no_such_function();\n}\n',
   },
 ];
 

@@ -46,7 +46,7 @@ test("publish, search, resolve, and install a package over HTTP", async () => {
     const signed = await client.resolve("example.thermostat");
     assert.equal(signed?.pkg.meta.version, "1.4.0");
 
-    const dir = await mkdtemp(join(tmpdir(), "openhome-http-install-"));
+    const dir = await mkdtemp(join(tmpdir(), "chipwright-http-install-"));
     const result = await writeVerifiedPackage(signed!, { dir });
     assert.equal(result.version, "1.4.0");
     const manifest = await readFile(join(dir, "device.yaml"), "utf8");

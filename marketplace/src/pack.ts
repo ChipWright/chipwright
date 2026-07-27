@@ -1,5 +1,5 @@
 // Packing a device project into a package. A project is a directory containing a device
-// manifest and, optionally, an openhome.package.json descriptor that names the metadata
+// manifest and, optionally, an chipwright.package.json descriptor that names the metadata
 // and the extra files to ship (drivers, tests, docs). With no descriptor, the manifest
 // alone is packed and its metadata is derived from the device, so publishing the simplest
 // device takes no hand-written metadata. This is the inverse of installing.
@@ -28,7 +28,7 @@ export interface PackageDescriptor {
   files?: string[];
 }
 
-export const DESCRIPTOR_FILE = "openhome.package.json";
+export const DESCRIPTOR_FILE = "chipwright.package.json";
 
 export class PackError extends Error {}
 

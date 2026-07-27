@@ -1,5 +1,5 @@
-#ifndef OPENHOME_HOSTCHECK_GPIO_H
-#define OPENHOME_HOSTCHECK_GPIO_H
+#ifndef CHIPWRIGHT_HOSTCHECK_GPIO_H
+#define CHIPWRIGHT_HOSTCHECK_GPIO_H
 
 #include <stdint.h>
 
@@ -43,4 +43,4 @@ typedef struct {
 esp_err_t gpio_config(const gpio_config_t *config);
 esp_err_t gpio_set_level(gpio_num_t gpio_num, uint32_t level);
 
-#endif  // OPENHOME_HOSTCHECK_GPIO_H
+#endif  // CHIPWRIGHT_HOSTCHECK_GPIO_H

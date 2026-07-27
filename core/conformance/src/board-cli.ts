@@ -1,8 +1,8 @@
 // CLI for board conformance records:
 //
-//   openhome-board record --chip <c> --bsp <b> --class <cls> --commit <sha> \
+//   chipwright-board record --chip <c> --bsp <b> --class <cls> --commit <sha> \
 //     --toolchain <t> --submitter <name> [--maintainer] [--notes <text>] < hil-run.log
-//   openhome-board list <dir>
+//   chipwright-board list <dir>
 //
 // `record` reads an acceptance HIL run on stdin, parses its pass/fail counts, and emits a record
 // JSON. `list` reads committed records under a directory and prints the supported-boards table.
@@ -47,7 +47,7 @@ function recordCommand(args: string[]): void {
   if (result === null) {
     process.stderr.write(
       "could not find a HIL suite result on stdin; pipe the acceptance run, e.g.\n" +
-        "  OPENHOME_HIL_PORT=/dev/tty.usbmodemXXXX make -C tests/suites/thermostat run | openhome-board record ...\n",
+        "  CHIPWRIGHT_HIL_PORT=/dev/tty.usbmodemXXXX make -C tests/suites/thermostat run | chipwright-board record ...\n",
     );
     process.exit(2);
   }
@@ -95,7 +95,7 @@ function collectRecords(dir: string): BoardConformanceRecord[] {
 function listCommand(args: string[]): void {
   const dir = args[0];
   if (dir === undefined) {
-    process.stderr.write("usage: openhome-board list <dir>\n");
+    process.stderr.write("usage: chipwright-board list <dir>\n");
     process.exit(2);
   }
   process.stdout.write(`${renderBoardTable(collectRecords(dir))}\n`);
@@ -108,7 +108,7 @@ function main(): void {
   } else if (command === "list") {
     listCommand(rest);
   } else {
-    process.stderr.write("usage: openhome-board <record|list> ...\n");
+    process.stderr.write("usage: chipwright-board <record|list> ...\n");
     process.exit(2);
   }
 }

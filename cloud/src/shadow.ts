@@ -1,5 +1,5 @@
 // Device shadow: the latest reported value of each telemetry metric per device. The
-// TelemetrySample shape matches the SDK's oh_telemetry_sample_t so firmware and twin can
+// TelemetrySample shape matches the SDK's cw_telemetry_sample_t so firmware and twin can
 // forward samples directly.
 
 export interface TelemetrySample {

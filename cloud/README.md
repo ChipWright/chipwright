@@ -59,9 +59,9 @@ Routes fall into three scopes:
 Configure tokens and TLS through the environment when serving:
 
 ```sh
-OPENHOME_ADMIN_TOKEN=... OPENHOME_DEVICE_TOKEN=... \
-OPENHOME_TLS_CERT=/path/fullchain.pem OPENHOME_TLS_KEY=/path/key.pem \
-PORT=8443 pnpm --filter @openhome/cloud serve
+CHIPWRIGHT_ADMIN_TOKEN=... CHIPWRIGHT_DEVICE_TOKEN=... \
+CHIPWRIGHT_TLS_CERT=/path/fullchain.pem CHIPWRIGHT_TLS_KEY=/path/key.pem \
+PORT=8443 pnpm --filter @chipwright/cloud serve
 ```
 
 Callers present the token as `Authorization: Bearer <token>`. Tokens are compared in
@@ -74,12 +74,12 @@ options)` accepts the same `adminToken`, `deviceToken`, and `tls` fields directl
 ## Running
 
 ```sh
-pnpm --filter @openhome/cloud test
-PORT=8080 pnpm --filter @openhome/cloud serve
+pnpm --filter @chipwright/cloud test
+PORT=8080 pnpm --filter @chipwright/cloud serve
 ```
 
-State persists to a JSON file (`OPENHOME_CLOUD_STATE`, default
-`~/.openhome/cloud-state.json`) so the server resumes across restarts: the device
+State persists to a JSON file (`CHIPWRIGHT_CLOUD_STATE`, default
+`~/.chipwright/cloud-state.json`) so the server resumes across restarts: the device
 registry, shadows, and command queue, plus the CA trust root and issued certificates,
 published firmware with its artifact bytes, and in-flight rollout campaigns. Persisted
 firmware is re-verified on load, so a tampered state file cannot inject an unsigned build.

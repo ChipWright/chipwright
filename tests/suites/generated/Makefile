@@ -1,6 +1,6 @@
 # Generates the acceptance suite from the device manifest, then compiles and runs it
 # against the twin. Requires the device engine to be built first:
-#   pnpm --filter @openhome/device-engine build
+#   pnpm --filter @chipwright/device-engine build
 
 TESTS := ../..
 REPO := $(TESTS)/..

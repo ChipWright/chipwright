@@ -15,7 +15,7 @@ echo "building firmware uplink"
 make -C "${REPO}/simulator/examples/thermostat_uplink" >/dev/null
 
 echo "starting cloud on port ${PORT}"
-PORT="${PORT}" pnpm --filter @openhome/cloud serve >/tmp/openhome-cloud.log 2>&1 &
+PORT="${PORT}" pnpm --filter @chipwright/cloud serve >/tmp/chipwright-cloud.log 2>&1 &
 CLOUD_PID=$!
 trap 'kill "${CLOUD_PID}" 2>/dev/null || true' EXIT
 
@@ -33,7 +33,7 @@ done
 echo "streaming telemetry: firmware -> bridge -> cloud"
 "${REPO}/simulator/examples/thermostat_uplink/build/thermostat_uplink" \
   | CLOUD_BASE="${BASE}" DEVICE_ID=smart_thermostat DEVICE_TYPE=thermostat \
-    pnpm --filter @openhome/cloud exec tsx src/bridge/uplink.ts
+    pnpm --filter @chipwright/cloud exec tsx src/bridge/uplink.ts
 
 echo "device shadow after uplink:"
 curl -s "${BASE}/devices/smart_thermostat/shadow"

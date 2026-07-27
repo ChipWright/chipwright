@@ -1,9 +1,9 @@
-#ifndef OPENHOME_TEST_H
-#define OPENHOME_TEST_H
+#ifndef CHIPWRIGHT_TEST_H
+#define CHIPWRIGHT_TEST_H
 
 #include <stdbool.h>
 
-#include "openhome/sdk.h"
+#include "chipwright/sdk.h"
 
 // Automated testing framework. Suites are written once against an abstract device target
 // and run identically on the digital twin today and on physical hardware later, so the
@@ -14,25 +14,25 @@
 typedef struct {
   const char *name;
   bool available;
-  oh_status_t (*connect)(void *ctx);
-  oh_status_t (*read_sensor)(void *ctx, const char *key, float *out_value);
-  oh_status_t (*set_mode)(void *ctx, const char *key, int mode);
+  cw_status_t (*connect)(void *ctx);
+  cw_status_t (*read_sensor)(void *ctx, const char *key, float *out_value);
+  cw_status_t (*set_mode)(void *ctx, const char *key, int mode);
   void *ctx;
-} oh_test_target_t;
+} cw_test_target_t;
 
 // Accumulates the results of one suite run.
 typedef struct {
   const char *name;
   unsigned checks;
   unsigned failures;
-} oh_test_run_t;
+} cw_test_run_t;
 
-void oh_test_begin(oh_test_run_t *run, const char *name);
-void oh_test_check(oh_test_run_t *run, bool ok, const char *expr, const char *file, int line);
+void cw_test_begin(cw_test_run_t *run, const char *name);
+void cw_test_check(cw_test_run_t *run, bool ok, const char *expr, const char *file, int line);
 
 // Prints a summary and returns 0 when every check passed, 1 otherwise.
-int oh_test_end(oh_test_run_t *run);
+int cw_test_end(cw_test_run_t *run);
 
-#define OH_EXPECT(run, cond) oh_test_check((run), (cond), #cond, __FILE__, __LINE__)
+#define CW_EXPECT(run, cond) cw_test_check((run), (cond), #cond, __FILE__, __LINE__)
 
-#endif  // OPENHOME_TEST_H
+#endif  // CHIPWRIGHT_TEST_H

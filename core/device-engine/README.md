@@ -1,7 +1,7 @@
-# @openhome/device-engine
+# @chipwright/device-engine
 
 The Device Definition Language (DDL) compiler and the Hardware Abstraction Layer — the
-foundation of OpenHome Studio (branches 1 and 2, Phase 1).
+foundation of Chipwright (branches 1 and 2, Phase 1).
 
 A device manifest is the single source of truth. The compiler validates it and runs
 generator backends that emit downstream artifacts (firmware interfaces, documentation,
@@ -10,7 +10,7 @@ and, later, cloud APIs, tests, and certification checklists).
 ## Usage
 
 ```sh
-pnpm --filter @openhome/device-engine build
+pnpm --filter @chipwright/device-engine build
 
 # Validate a manifest
 node dist/cli.js validate ../../examples/thermostat/device.yaml
@@ -22,7 +22,7 @@ node dist/cli.js compile ../../examples/thermostat/device.yaml --out ./out
 During development you can run the CLI without building:
 
 ```sh
-pnpm --filter @openhome/device-engine openhome -- validate ../../examples/thermostat/device.yaml
+pnpm --filter @chipwright/device-engine chipwright -- validate ../../examples/thermostat/device.yaml
 ```
 
 ## Layout

@@ -34,14 +34,14 @@ function final(text: string): Completion {
 }
 
 // Firmware that implements every generated prototype by delegating to the HAL, matching the
-// interface for this device (oh_temperature_sensor_read, oh_hvac_set_mode / oh_hvac_mode_t).
+// interface for this device (cw_temperature_sensor_read, cw_hvac_set_mode / cw_hvac_mode_t).
 const GOOD_FILES: BspFile[] = [
   {
     path: "smart_thermostat.c",
     content:
-      '#include "openhome/hal.h"\n#include "openhome/sdk.h"\n#include "smart_thermostat_interface.h"\n' +
-      "oh_status_t oh_temperature_sensor_read(float *out_value) {\n  return oh_hal_read_sensor(\"temperature_sensor\", out_value);\n}\n" +
-      "oh_status_t oh_hvac_set_mode(oh_hvac_mode_t mode) {\n  return oh_hal_set_actuator_mode(\"hvac\", (int)mode);\n}\n",
+      '#include "chipwright/hal.h"\n#include "chipwright/sdk.h"\n#include "smart_thermostat_interface.h"\n' +
+      "cw_status_t cw_temperature_sensor_read(float *out_value) {\n  return cw_hal_read_sensor(\"temperature_sensor\", out_value);\n}\n" +
+      "cw_status_t cw_hvac_set_mode(cw_hvac_mode_t mode) {\n  return cw_hal_set_actuator_mode(\"hvac\", (int)mode);\n}\n",
   },
 ];
 
@@ -51,7 +51,7 @@ const BROKEN_FILES: BspFile[] = [
   {
     path: "smart_thermostat.c",
     content:
-      '#include "smart_thermostat_interface.h"\noh_status_t oh_hvac_set_mode(int mode) {\n  return no_such_function(mode);\n}\n',
+      '#include "smart_thermostat_interface.h"\ncw_status_t cw_hvac_set_mode(int mode) {\n  return no_such_function(mode);\n}\n',
   },
 ];
 
@@ -73,8 +73,8 @@ test("read_device_interface returns the prototypes generated from the manifest",
   const tool = firmwareTools().find((t) => t.schema.name === "read_device_interface");
   assert.ok(tool);
   const output = await tool.handler({}, context);
-  assert.match(output, /oh_temperature_sensor_read\(float \*out_value\)/);
-  assert.match(output, /oh_hvac_set_mode\(oh_hvac_mode_t mode\)/);
+  assert.match(output, /cw_temperature_sensor_read\(float \*out_value\)/);
+  assert.match(output, /cw_hvac_set_mode\(cw_hvac_mode_t mode\)/);
 });
 
 test("the loop reads the interface then proposes firmware that compiles", async () => {

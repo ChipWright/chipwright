@@ -1,4 +1,4 @@
-// On-device OTA for the smart_thermostat on ESP32-C6. The device polls the OpenHome cloud for
+// On-device OTA for the smart_thermostat on ESP32-C6. The device polls the Chipwright cloud for
 // the newest published firmware, downloads it into the inactive OTA slot, verifies the
 // artifact's SHA-256 and the cloud's Ed25519 signature against a baked-in public key, and only
 // then switches to it. A freshly applied image boots as pending-verify and must pass a
@@ -30,9 +30,9 @@
 
 #include "signing_public_key.h"
 
-static const char *TAG = "openhome.ota";
+static const char *TAG = "chipwright.ota";
 
-#define OH_DEVICE_TYPE "smart_thermostat"
+#define CW_DEVICE_TYPE "smart_thermostat"
 #define WIFI_CONNECTED_BIT BIT0
 
 static EventGroupHandle_t s_wifi_events;
@@ -89,8 +89,8 @@ static esp_err_t wifi_connect(void) {
   ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, wifi_event_handler, NULL));
 
   wifi_config_t config = {0};
-  strncpy((char *)config.sta.ssid, CONFIG_OH_WIFI_SSID, sizeof config.sta.ssid - 1);
-  strncpy((char *)config.sta.password, CONFIG_OH_WIFI_PASSWORD, sizeof config.sta.password - 1);
+  strncpy((char *)config.sta.ssid, CONFIG_CW_WIFI_SSID, sizeof config.sta.ssid - 1);
+  strncpy((char *)config.sta.password, CONFIG_CW_WIFI_PASSWORD, sizeof config.sta.password - 1);
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
   ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &config));
   ESP_ERROR_CHECK(esp_wifi_start());
@@ -154,7 +154,7 @@ static char *http_get_body(const char *url) {
 static esp_err_t download_and_verify(const char *base_url, const char *version,
                                      const char *expected_sha_hex, const char *signature_b64) {
   char url[256];
-  snprintf(url, sizeof url, "%s/firmware/%s/%s/artifact", base_url, OH_DEVICE_TYPE, version);
+  snprintf(url, sizeof url, "%s/firmware/%s/%s/artifact", base_url, CW_DEVICE_TYPE, version);
 
   const esp_partition_t *target = esp_ota_get_next_update_partition(NULL);
   if (target == NULL) {
@@ -243,7 +243,7 @@ static esp_err_t download_and_verify(const char *base_url, const char *version,
   char payload[256];
   const int payload_len = snprintf(payload, sizeof payload,
                                    "{\"deviceType\":\"%s\",\"version\":\"%s\",\"artifactSha256\":\"%s\"}",
-                                   OH_DEVICE_TYPE, version, expected_sha_hex);
+                                   CW_DEVICE_TYPE, version, expected_sha_hex);
   unsigned char signature[64];
   size_t sig_len = 0;
   if (mbedtls_base64_decode(signature, sizeof signature, &sig_len,
@@ -254,7 +254,7 @@ static esp_err_t download_and_verify(const char *base_url, const char *version,
     return ESP_FAIL;
   }
   if (crypto_sign_verify_detached(signature, (const unsigned char *)payload, (size_t)payload_len,
-                                  OH_SIGNING_PUBLIC_KEY) != 0) {
+                                  CW_SIGNING_PUBLIC_KEY) != 0) {
     ESP_LOGE(TAG, "signature verification FAILED; rejecting image");
     esp_ota_abort(ota);
     return ESP_FAIL;
@@ -268,14 +268,14 @@ static esp_err_t download_and_verify(const char *base_url, const char *version,
     ESP_LOGE(TAG, "failed to set boot partition");
     return ESP_FAIL;
   }
-  ESP_LOGI(TAG, "verified %s@%s staged to %s; rebooting", OH_DEVICE_TYPE, version, target->label);
+  ESP_LOGI(TAG, "verified %s@%s staged to %s; rebooting", CW_DEVICE_TYPE, version, target->label);
   return ESP_OK;
 }
 
 // Checks the cloud for a newer build and, if one verifies, stages it and reboots.
 static void check_for_update(const char *base_url, const char *running_version) {
   char url[256];
-  snprintf(url, sizeof url, "%s/firmware/%s/latest", base_url, OH_DEVICE_TYPE);
+  snprintf(url, sizeof url, "%s/firmware/%s/latest", base_url, CW_DEVICE_TYPE);
   char *body = http_get_body(url);
   if (body == NULL) {
     ESP_LOGW(TAG, "no manifest available from %s", url);
@@ -316,7 +316,7 @@ static void confirm_or_rollback(void) {
       state != ESP_OTA_IMG_PENDING_VERIFY) {
     return;
   }
-#if CONFIG_OH_OTA_SELFTEST_FAIL
+#if CONFIG_CW_OTA_SELFTEST_FAIL
   const bool self_test_ok = false;
 #else
   const bool self_test_ok = true;
@@ -344,20 +344,20 @@ void app_main(void) {
 
   const esp_app_desc_t *app = esp_app_get_description();
   const esp_partition_t *running = esp_ota_get_running_partition();
-  ESP_LOGI(TAG, "booted %s@%s from partition %s", OH_DEVICE_TYPE, app->version, running->label);
+  ESP_LOGI(TAG, "booted %s@%s from partition %s", CW_DEVICE_TYPE, app->version, running->label);
 
   confirm_or_rollback();
 
   if (wifi_connect() != ESP_OK) {
     ESP_LOGE(TAG, "wifi connect failed; cannot check for updates");
   } else {
-    check_for_update(CONFIG_OH_OTA_CLOUD_URL, app->version);
+    check_for_update(CONFIG_CW_OTA_CLOUD_URL, app->version);
   }
 
   // Report the running version periodically so the update or rollback is observable on the
   // serial console.
   for (;;) {
-    ESP_LOGI(TAG, "running %s@%s on %s", OH_DEVICE_TYPE, app->version, running->label);
+    ESP_LOGI(TAG, "running %s@%s on %s", CW_DEVICE_TYPE, app->version, running->label);
     vTaskDelay(pdMS_TO_TICKS(5000));
   }
 }

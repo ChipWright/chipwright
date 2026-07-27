@@ -15,12 +15,12 @@ async function tempDir(prefix: string): Promise<string> {
 }
 
 test("a package packs, publishes, resolves, and installs end to end", async () => {
-  const project = await tempDir("openhome-project-");
+  const project = await tempDir("chipwright-project-");
   await writeFile(join(project, "device.yaml"), MANIFEST, "utf8");
   await mkdir(join(project, "driver"), { recursive: true });
   await writeFile(join(project, "driver", "thermostat.c"), "// driver\n", "utf8");
   await writeFile(
-    join(project, "openhome.package.json"),
+    join(project, "chipwright.package.json"),
     JSON.stringify({ name: "example.thermostat", version: "1.0.0", files: ["driver/thermostat.c"] }),
     "utf8",
   );
@@ -32,7 +32,7 @@ test("a package packs, publishes, resolves, and installs end to end", async () =
   const registry = new PackageRegistry(new InMemoryStore());
   registry.publish(new Publisher().sign(pkg));
 
-  const target = await tempDir("openhome-install-");
+  const target = await tempDir("chipwright-install-");
   const result = await installPackage(registry, "example.thermostat", { dir: target });
   assert.equal(result.version, "1.0.0");
   assert.deepEqual(result.files.sort(), ["device.yaml", "driver/thermostat.c"]);
@@ -44,7 +44,7 @@ test("a package packs, publishes, resolves, and installs end to end", async () =
 
 test("installing an unknown package throws", async () => {
   const registry = new PackageRegistry(new InMemoryStore());
-  const dir = await tempDir("openhome-x-");
+  const dir = await tempDir("chipwright-x-");
   await assert.rejects(() => installPackage(registry, "does.not.exist", { dir }), InstallError);
 });
 
@@ -63,7 +63,7 @@ test("an untrusted publisher is rejected, a trusted one is accepted", async () =
     InstallError,
   );
 
-  const target = await tempDir("openhome-trust-");
+  const target = await tempDir("chipwright-trust-");
   const result = await installPackage(registry, "example.thermostat", {
     dir: target,
     trustedPublishers: [publisher.publicKeyPem],

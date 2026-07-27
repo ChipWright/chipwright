@@ -1,12 +1,12 @@
-#ifndef OPENHOME_TEST_TARGET_HIL_H
-#define OPENHOME_TEST_TARGET_HIL_H
+#ifndef CHIPWRIGHT_TEST_TARGET_HIL_H
+#define CHIPWRIGHT_TEST_TARGET_HIL_H
 
-#include "openhome/test.h"
+#include "chipwright/test.h"
 
 // Initializes a hardware-in-the-loop target that drives a real board over its serial
-// console. Set OPENHOME_HIL_PORT to the board's serial device to enable it; otherwise the
+// console. Set CHIPWRIGHT_HIL_PORT to the board's serial device to enable it; otherwise the
 // target reports itself unavailable and the runner skips it, so the same suite runs against
 // the twin in CI and against physical hardware when a board is attached.
-void oh_test_target_hil_init(oh_test_target_t *target);
+void cw_test_target_hil_init(cw_test_target_t *target);
 
-#endif  // OPENHOME_TEST_TARGET_HIL_H
+#endif  // CHIPWRIGHT_TEST_TARGET_HIL_H

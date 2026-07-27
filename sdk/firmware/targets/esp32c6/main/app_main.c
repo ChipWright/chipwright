@@ -10,17 +10,17 @@
 #include "driver/usb_serial_jtag.h"
 #include "driver/usb_serial_jtag_vfs.h"
 
-#include "openhome/hal.h"
-#include "openhome/sdk.h"
+#include "chipwright/hal.h"
+#include "chipwright/sdk.h"
 #include "esp32_bsp.h"
 #include "smart_thermostat_interface.h"
 
-oh_status_t oh_temperature_sensor_read(float *out_value) {
-  return oh_hal_read_sensor("temperature_sensor", out_value);
+cw_status_t cw_temperature_sensor_read(float *out_value) {
+  return cw_hal_read_sensor("temperature_sensor", out_value);
 }
 
-oh_status_t oh_hvac_set_mode(oh_hvac_mode_t mode) {
-  return oh_hal_set_actuator_mode("hvac", (int)mode);
+cw_status_t cw_hvac_set_mode(cw_hvac_mode_t mode) {
+  return cw_hal_set_actuator_mode("hvac", (int)mode);
 }
 
 // Drains any bytes waiting on the USB-Serial-JTAG console and applies a command once a full
@@ -34,7 +34,7 @@ static void poll_commands(void) {
     if (byte == '\n' || byte == '\r') {
       if (len > 0) {
         line[len] = '\0';
-        oh_command_apply(line);
+        cw_command_apply(line);
         len = 0;
       }
     } else if (len + 1 < sizeof line) {
@@ -47,23 +47,23 @@ static void poll_commands(void) {
 }
 
 void app_main(void) {
-  const oh_device_t device = {.name = "smart_thermostat"};
+  const cw_device_t device = {.name = "smart_thermostat"};
 
   usb_serial_jtag_driver_config_t usb_config = USB_SERIAL_JTAG_DRIVER_CONFIG_DEFAULT();
   if (usb_serial_jtag_driver_install(&usb_config) != ESP_OK) {
-    oh_log(OH_LOG_ERROR, "failed to install serial command channel");
+    cw_log(CW_LOG_ERROR, "failed to install serial command channel");
     return;
   }
   // Route stdout through the driver so telemetry output and command input share the console
   // consistently rather than contending for the peripheral.
   usb_serial_jtag_vfs_use_driver();
 
-  if (oh_esp32_bsp_register() != OH_OK) {
-    oh_log(OH_LOG_ERROR, "failed to register esp32 board support");
+  if (cw_esp32_bsp_register() != CW_OK) {
+    cw_log(CW_LOG_ERROR, "failed to register esp32 board support");
     return;
   }
-  if (oh_device_init(&device) != OH_OK) {
-    oh_log(OH_LOG_ERROR, "failed to initialize device");
+  if (cw_device_init(&device) != CW_OK) {
+    cw_log(CW_LOG_ERROR, "failed to initialize device");
     return;
   }
 
@@ -71,7 +71,7 @@ void app_main(void) {
   // sample, and applies any actuator command that has arrived. A one-second delay between
   // cycles keeps the console readable.
   for (;;) {
-    oh_device_run(&device, 1);
+    cw_device_run(&device, 1);
     poll_commands();
     vTaskDelay(pdMS_TO_TICKS(1000));
   }

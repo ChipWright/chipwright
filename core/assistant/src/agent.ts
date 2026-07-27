@@ -6,7 +6,7 @@
 import type { LlmProvider, Message } from "./types.js";
 import type { Tool } from "./tools.js";
 
-export const DEFAULT_SYSTEM_PROMPT = `You are the OpenHome device development assistant. You help engineers understand, diagnose, and evolve smart-device definitions written in the OpenHome Device Definition Language (DDL), a YAML manifest.
+export const DEFAULT_SYSTEM_PROMPT = `You are the Chipwright device development assistant. You help engineers understand, diagnose, and evolve smart-device definitions written in the Chipwright Device Definition Language (DDL), a YAML manifest.
 
 The manifest shape is:
   device: { name (lower_snake_case), manufacturer, category }

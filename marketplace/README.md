@@ -1,7 +1,7 @@
 # Marketplace
 
-Package registry for OpenHome device definitions (branch 13, Phase 6): publish, discover,
-and install device packages with `openhome install <device>`. Built on the Node standard
+Package registry for Chipwright device definitions (branch 13, Phase 6): publish, discover,
+and install device packages with `chipwright install <device>`. Built on the Node standard
 library, with Ed25519 signatures and SHA-256 from `node:crypto`; it depends only on the
 device engine so it can validate a package's manifest at publish and install time.
 
@@ -38,22 +38,22 @@ report for a registry that prefers to record the verdict rather than block on it
 ## Command line
 
 ```sh
-openhome publish [dir]                     pack, sign, and publish a project (default .)
-openhome install <name[@version]> --dir .  install a package into a directory
-openhome search [query]                    list packages matching a query
-openhome info <name[@version]>             show a package's metadata, versions, and files
-openhome list                              list every published package
+chipwright publish [dir]                     pack, sign, and publish a project (default .)
+chipwright install <name[@version]> --dir .  install a package into a directory
+chipwright search [query]                    list packages matching a query
+chipwright info <name[@version]>             show a package's metadata, versions, and files
+chipwright list                              list every published package
 ```
 
-The registry home defaults to `$OPENHOME_REGISTRY` or `~/.openhome`; pass `--registry
-<dir>` to use another. A project may include an `openhome.package.json` descriptor to set
+The registry home defaults to `$CHIPWRIGHT_REGISTRY` or `~/.chipwright`; pass `--registry
+<dir>` to use another. A project may include an `chipwright.package.json` descriptor to set
 metadata and list the extra files to ship; without one, the manifest alone is packed and
 its metadata is derived from the device.
 
 ## Remote registry
 
 The same commands work against a networked registry: pass `--registry-url <url>` (or set
-`$OPENHOME_REGISTRY_URL`) and publish, install, search, and info go over HTTP instead of
+`$CHIPWRIGHT_REGISTRY_URL`) and publish, install, search, and info go over HTTP instead of
 the local directory. Installs re-verify a fetched package exactly as they do a local one,
 so trust does not depend on transport. The server is a thin HTTP layer over the registry:
 
@@ -67,9 +67,9 @@ POST /packages                 publish a signed package (rejected unless it veri
 ## Running
 
 ```sh
-pnpm --filter @openhome/marketplace test
-PORT=8080 pnpm --filter @openhome/marketplace serve
-pnpm --filter @openhome/marketplace cli -- search --registry-url http://localhost:8080
+pnpm --filter @chipwright/marketplace test
+PORT=8080 pnpm --filter @chipwright/marketplace serve
+pnpm --filter @chipwright/marketplace cli -- search --registry-url http://localhost:8080
 ```
 
 ## Not yet implemented

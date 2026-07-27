@@ -1,4 +1,4 @@
-// The package format for the OpenHome marketplace. A package bundles a device
+// The package format for the Chipwright marketplace. A package bundles a device
 // definition (the DDL) together with any drivers, tests, and documentation that ship
 // with it, plus the metadata needed to find and install it. The device manifest is the
 // only required file: a package that does not describe a device is not a device package.

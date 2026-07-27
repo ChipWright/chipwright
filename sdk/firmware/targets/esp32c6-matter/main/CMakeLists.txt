@@ -1,4 +1,4 @@
-# The firmware component: the Matter app entry plus the portable OpenHome SDK core and the
+# The firmware component: the Matter app entry plus the portable Chipwright SDK core and the
 # ESP32 BSP (on-die temperature sensor), referenced from the shared firmware tree so the
 # Matter device runs the same code the twin and plain telemetry firmware do.
 idf_component_register(

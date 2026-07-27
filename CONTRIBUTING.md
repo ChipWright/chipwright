@@ -1,6 +1,6 @@
-# Contributing to OpenHome Studio
+# Contributing to Chipwright
 
-OpenHome Studio is developed and maintained as a free service. The core service (the DDL and its
+Chipwright is developed and maintained as a free service. The core service (the DDL and its
 compiler, the generators, the twin, the cloud, the marketplace, the assistant, and the IDE) is
 built by the maintainers and is not open for outside feature development.
 
@@ -42,7 +42,7 @@ A BSP is accepted when:
 - it has a **host compile check** so CI can type-check it without the vendor toolchain (see
   `sdk/firmware/bsp/esp32/hostcheck`),
 - the shared acceptance suite passes against it on the twin, and against real hardware over
-  the serial HIL where applicable (`OPENHOME_HIL_PORT`),
+  the serial HIL where applicable (`CHIPWRIGHT_HIL_PORT`),
 - it ships a board conformance record capturing that HIL run (support is earned from evidence,
   not asserted; see the guide), and
 - it does not change shared SDK behavior; board specifics stay inside the BSP.

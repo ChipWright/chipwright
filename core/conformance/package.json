@@ -8,8 +8,8 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "openhome-conform": "./dist/cli.js",
-    "openhome-board": "./dist/board-cli.js"
+    "chipwright-conform": "./dist/cli.js",
+    "chipwright-board": "./dist/board-cli.js"
   },
   "files": [
     "dist"

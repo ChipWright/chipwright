@@ -1,4 +1,4 @@
-# OpenHome Studio
+# Chipwright
 
 [![CI](https://github.com/Diegoregalado0/openhome-studio/actions/workflows/ci.yml/badge.svg)](https://github.com/Diegoregalado0/openhome-studio/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Elastic--2.0%20%2B%20Apache--2.0-blue.svg)](LICENSING.md)
@@ -6,7 +6,7 @@
 **Build a production smart device from a single definition, and it's free.**
 
 Describe your device once, in plain terms: what it senses, what it controls, how it connects,
-how it is powered and secured. OpenHome Studio gives you the firmware interface, the cloud API,
+how it is powered and secured. Chipwright gives you the firmware interface, the cloud API,
 the tests, and the documentation, runs it as a live digital twin before you own any hardware,
 delivers signed over-the-air updates to the real chip, and packages it so others can install
 it. Building a smart device should feel as approachable as building a web app.
@@ -49,7 +49,7 @@ stay in lockstep because they are generated, never authored separately.
 - **Develop before you have hardware.** Run the device as a digital twin that executes the real
   SDK build, with sensor, network, and power fault injection.
 - **Check conformance.** Verify a device is a valid instance of its class and maps to the right
-  Matter device type, so ecosystems recognize it. `openhome-conform device.yaml`.
+  Matter device type, so ecosystems recognize it. `chipwright-conform device.yaml`.
 - **Design and debug visually.** A VS Code extension with a device designer and a live twin
   debugger (telemetry chart, fault controls).
 - **Operate a fleet.** A cloud service for device registry, telemetry, device shadow, command
@@ -140,7 +140,7 @@ definition, and a live twin debugger with a telemetry chart and fault controls.
      "version": "0.2.0",
      "configurations": [
        {
-         "name": "Run OpenHome Studio",
+         "name": "Run Chipwright",
          "type": "extensionHost",
          "request": "launch",
          "args": [
@@ -152,13 +152,13 @@ definition, and a live twin debugger with a telemetry chart and fault controls.
    }
    ```
 
-3. Press **F5**, then open the **OpenHome Studio** view in the activity bar to design a device
+3. Press **F5**, then open the **Chipwright** view in the activity bar to design a device
    and debug its twin.
 
 ### 5. Operate a fleet with the cloud
 
 ```sh
-PORT=8080 pnpm --filter @openhome/cloud serve
+PORT=8080 pnpm --filter @chipwright/cloud serve
 ```
 
 A dependency-free registry, telemetry shadow, command queue, identity authority, firmware
@@ -171,8 +171,8 @@ The cloud signs firmware; the device verifies and applies it, and rolls back a b
 automatically. Establish a signing identity, publish a build, and the device self-updates:
 
 ```sh
-pnpm --filter @openhome/cloud firmware keygen ~/.openhome/firmware-signing.key
-pnpm --filter @openhome/cloud firmware publish ~/.openhome/firmware-signing.key \
+pnpm --filter @chipwright/cloud firmware keygen ~/.chipwright/firmware-signing.key
+pnpm --filter @chipwright/cloud firmware publish ~/.chipwright/firmware-signing.key \
   smart_thermostat 1.0.1 path/to/firmware.bin http://<host-ip>:8091
 ```
 
@@ -199,8 +199,8 @@ Bring your own key. Proposals are grounded, checked against the real compiler be
 them, and applying one is an explicit step:
 
 ```sh
-export OPENHOME_LLM_PROVIDER=anthropic       # or gemini, or openai-compatible
-export OPENHOME_LLM_API_KEY=sk-...
+export CHIPWRIGHT_LLM_PROVIDER=anthropic       # or gemini, or openai-compatible
+export CHIPWRIGHT_LLM_API_KEY=sk-...
 node core/assistant/dist/cli.js ask \
   "add a humidity sensor and make it battery powered" \
   --device examples/thermostat/device.yaml
@@ -219,7 +219,7 @@ proven on real silicon (ESP32-C6).
 - **Telemetry firmware.** The manifest-generated firmware streams live temperature from the
   chip's on-die sensor. [`sdk/firmware/targets/esp32c6`](sdk/firmware/targets/esp32c6).
 - **Hardware-in-the-loop testing.** The same acceptance suite runs against the twin and the
-  physical board over its serial console, unchanged, via `OPENHOME_HIL_PORT`. It reads
+  physical board over its serial console, unchanged, via `CHIPWRIGHT_HIL_PORT`. It reads
   telemetry for sensors and sends commands (confirmed by the firmware) to drive the HVAC
   actuator on a real GPIO.
 - **Real Matter.** A Matter-over-Wi-Fi build that commissions onto a Matter fabric, and a
@@ -233,7 +233,7 @@ proven on real silicon (ESP32-C6).
 # telemetry
 idf.py -C sdk/firmware/targets/esp32c6 set-target esp32c6 build flash monitor
 # HIL: run the acceptance suite against the board (sensors and actuator)
-OPENHOME_HIL_PORT=/dev/tty.usbmodem1401 make -C tests/suites/thermostat run
+CHIPWRIGHT_HIL_PORT=/dev/tty.usbmodem1401 make -C tests/suites/thermostat run
 ```
 
 Want a chip that isn't supported yet? That is exactly the contribution the project invites.
@@ -241,7 +241,7 @@ See [Extend it with your hardware](#extend-it-with-your-hardware).
 
 ## The three layers
 
-OpenHome Studio is designed around three layers, which is also how the licensing and the
+Chipwright is designed around three layers, which is also how the licensing and the
 contribution model divide up:
 
 | Layer | What it is | Who owns it | License |
@@ -304,7 +304,7 @@ and the twin smoke test. See [`.github/workflows/ci.yml`](.github/workflows/ci.y
 
 ## Licensing
 
-OpenHome Studio is **free to use**, split across two licenses along a deliberate line:
+Chipwright is **free to use**, split across two licenses along a deliberate line:
 
 - The **service** (everything except `sdk/firmware/`) is under the
   [Elastic License 2.0](LICENSE): use, modify, and self-host freely; do not offer it to others

@@ -1,11 +1,11 @@
 {
   "name": "@chipwright/device-engine",
   "version": "0.0.0",
-  "description": "Device Definition Language compiler and Hardware Abstraction Layer for OpenHome Studio",
+  "description": "Device Definition Language compiler and Hardware Abstraction Layer for Chipwright",
   "license": "Elastic-2.0",
   "type": "module",
   "bin": {
-    "openhome": "./dist/cli.js"
+    "chipwright": "./dist/cli.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -16,7 +16,7 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --import tsx --test test/*.test.ts",
-    "openhome": "tsx src/cli.ts"
+    "chipwright": "tsx src/cli.ts"
   },
   "engines": {
     "node": ">=22"

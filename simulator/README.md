@@ -7,7 +7,7 @@ hardware.
 
 ## What works today
 
-- Simulated scalar signal source (`oh_sim_source_t`)
+- Simulated scalar signal source (`cw_sim_source_t`)
 - Sensor fault injection: none, stuck (frozen reading), fail (I/O error), and offset
   (calibration drift), changeable mid-run
 - Telemetry capture through the twin runtime for observation and assertion
@@ -16,7 +16,7 @@ hardware.
 
 ## Layout
 
-- `include/openhome/sim.h` — simulator API
+- `include/chipwright/sim.h` — simulator API
 - `src/` — signal source, fault injection, twin runtime
 - `tests/` — unit tests for source, faults, and capture
 - `examples/thermostat_twin/` — runs the thermostat twin through several fault scenarios

@@ -29,11 +29,11 @@ test("firmware generator emits a header with prototypes and an enum", () => {
   const files = generate();
   const header = files.find((f) => f.path === "firmware/smart_thermostat_interface.h");
   assert.ok(header);
-  assert.match(header.contents, /#ifndef OPENHOME_SMART_THERMOSTAT_INTERFACE_H/);
-  assert.match(header.contents, /oh_temperature_sensor_read\(float \*out_value\);/);
-  assert.match(header.contents, /#define OH_TEMPERATURE_SENSOR_MIN \(-20\)/);
-  assert.match(header.contents, /OH_HVAC_MODE_HEATING,/);
-  assert.match(header.contents, /oh_hvac_set_mode\(oh_hvac_mode_t mode\);/);
+  assert.match(header.contents, /#ifndef CHIPWRIGHT_SMART_THERMOSTAT_INTERFACE_H/);
+  assert.match(header.contents, /cw_temperature_sensor_read\(float \*out_value\);/);
+  assert.match(header.contents, /#define CW_TEMPERATURE_SENSOR_MIN \(-20\)/);
+  assert.match(header.contents, /CW_HVAC_MODE_HEATING,/);
+  assert.match(header.contents, /cw_hvac_set_mode\(cw_hvac_mode_t mode\);/);
 });
 
 test("documentation generator emits a capability table", () => {
@@ -70,12 +70,12 @@ test("test-stub generator emits a suite with per-capability assertions", () => {
   const files = generate();
   const suite = files.find((f) => f.path === "tests/smart_thermostat_generated.c");
   assert.ok(suite);
-  assert.match(suite.contents, /void oh_generated_suite\(oh_test_run_t \*run, oh_test_target_t \*target\)/);
-  assert.match(suite.contents, /target->connect\(target->ctx\) == OH_OK/);
+  assert.match(suite.contents, /void cw_generated_suite\(cw_test_run_t \*run, cw_test_target_t \*target\)/);
+  assert.match(suite.contents, /target->connect\(target->ctx\) == CW_OK/);
   assert.match(suite.contents, /read_sensor\(target->ctx, "temperature_sensor", &temperature_sensor\)/);
   assert.match(suite.contents, /temperature_sensor >= -20\.0f && temperature_sensor <= 50\.0f/);
-  assert.match(suite.contents, /set_mode\(target->ctx, "hvac", 0\) == OH_OK\);  \/\/ heating/);
-  assert.match(suite.contents, /set_mode\(target->ctx, "hvac", 2\) == OH_OK\);  \/\/ off/);
+  assert.match(suite.contents, /set_mode\(target->ctx, "hvac", 0\) == CW_OK\);  \/\/ heating/);
+  assert.match(suite.contents, /set_mode\(target->ctx, "hvac", 2\) == CW_OK\);  \/\/ off/);
 });
 
 test("docs-site generator emits a browsable static site", () => {

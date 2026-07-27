@@ -1,7 +1,7 @@
 # Builds the reference thermostat firmware for the native host.
 #
-# The interface header is generated from the device manifest by @openhome/device-engine,
-# so the engine must be built first: pnpm --filter @openhome/device-engine build
+# The interface header is generated from the device manifest by @chipwright/device-engine,
+# so the engine must be built first: pnpm --filter @chipwright/device-engine build
 
 SDK := ../..
 REPO := $(SDK)/../..

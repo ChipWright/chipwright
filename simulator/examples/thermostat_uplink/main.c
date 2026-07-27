@@ -3,13 +3,13 @@
 // end of a full device-to-cloud telemetry path without adding a network stack to the C
 // firmware.
 
-#include "openhome/hal.h"
-#include "openhome/sdk.h"
-#include "openhome/sim.h"
+#include "chipwright/hal.h"
+#include "chipwright/sdk.h"
+#include "chipwright/sim.h"
 
 #include <stdio.h>
 
-static void ndjson_sink(const oh_telemetry_sample_t *sample, void *ctx) {
+static void ndjson_sink(const cw_telemetry_sample_t *sample, void *ctx) {
   (void)ctx;
   printf("{\"metric\":\"%s\",\"value\":%.2f,\"unit\":\"%s\"}\n", sample->metric,
          (double)sample->value, sample->unit);
@@ -17,19 +17,19 @@ static void ndjson_sink(const oh_telemetry_sample_t *sample, void *ctx) {
 }
 
 int main(void) {
-  oh_sim_source_t source;
-  oh_fault_sensor_t sensor;
-  oh_sim_source_init(&source, 21.0f, 0.5f);
-  oh_fault_sensor_init(&sensor, oh_sim_source_driver(&source));
+  cw_sim_source_t source;
+  cw_fault_sensor_t sensor;
+  cw_sim_source_init(&source, 21.0f, 0.5f);
+  cw_fault_sensor_init(&sensor, cw_sim_source_driver(&source));
 
-  oh_hal_reset();
-  oh_hal_register_sensor("temperature_sensor", "celsius", oh_fault_sensor_driver(&sensor));
+  cw_hal_reset();
+  cw_hal_register_sensor("temperature_sensor", "celsius", cw_fault_sensor_driver(&sensor));
 
-  const oh_device_t device = {.name = "smart_thermostat"};
-  oh_device_init(&device);
+  const cw_device_t device = {.name = "smart_thermostat"};
+  cw_device_init(&device);
 
-  oh_telemetry_set_sink(ndjson_sink, NULL);
-  oh_device_run(&device, 5);
-  oh_telemetry_set_sink(NULL, NULL);
+  cw_telemetry_set_sink(ndjson_sink, NULL);
+  cw_device_run(&device, 5);
+  cw_telemetry_set_sink(NULL, NULL);
   return 0;
 }

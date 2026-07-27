@@ -104,7 +104,7 @@ const readDeviceInterface: Tool<FirmwareToolContext> = {
   schema: {
     name: "read_device_interface",
     description:
-      "Read the generated firmware interface for the current device: the exact capability prototypes (oh_<key>_read, oh_<key>_set_mode) the firmware must implement. Read this first.",
+      "Read the generated firmware interface for the current device: the exact capability prototypes (cw_<key>_read, cw_<key>_set_mode) the firmware must implement. Read this first.",
     parameters: { type: "object", properties: {} },
   },
   handler: async (_args, context) => {
@@ -120,11 +120,11 @@ const readHalInterface: Tool<FirmwareToolContext> = {
   schema: {
     name: "read_hal_interface",
     description:
-      "Read the OpenHome SDK and HAL headers the firmware calls (sdk.h and hal.h): status codes, the device lifecycle (oh_device_init, oh_device_run), telemetry, and the HAL sensor/actuator functions.",
+      "Read the Chipwright SDK and HAL headers the firmware calls (sdk.h and hal.h): status codes, the device lifecycle (cw_device_init, cw_device_run), telemetry, and the HAL sensor/actuator functions.",
     parameters: { type: "object", properties: {} },
   },
   handler: async (_args, context) => {
-    const dir = join(context.sdkFirmwareDir, "include", "openhome");
+    const dir = join(context.sdkFirmwareDir, "include", "chipwright");
     const [sdk, hal] = await Promise.all([
       readFile(join(dir, "sdk.h"), "utf8"),
       readFile(join(dir, "hal.h"), "utf8"),
@@ -198,9 +198,9 @@ const proposeFirmware: Tool<FirmwareToolContext> = {
   },
 };
 
-export const FIRMWARE_SYSTEM_PROMPT = `You are the OpenHome firmware assistant. You help a developer write the device logic that runs on top of a device's generated interface.
+export const FIRMWARE_SYSTEM_PROMPT = `You are the Chipwright firmware assistant. You help a developer write the device logic that runs on top of a device's generated interface.
 
-The device definition (DDL) is compiled into a firmware interface header that declares one prototype per capability: a sensor is oh_<key>_read(float *out_value), an actuator is oh_<key>_set_mode(oh_<key>_mode_t mode). Firmware implements those prototypes and the device lifecycle from the SDK (oh_device_init, oh_device_run), calling the HAL (oh_hal_*) to reach the hardware through a board support package. Nothing above the HAL names a register.
+The device definition (DDL) is compiled into a firmware interface header that declares one prototype per capability: a sensor is cw_<key>_read(float *out_value), an actuator is cw_<key>_set_mode(cw_<key>_mode_t mode). Firmware implements those prototypes and the device lifecycle from the SDK (cw_device_init, cw_device_run), calling the HAL (cw_hal_*) to reach the hardware through a board support package. Nothing above the HAL names a register.
 
 Rules:
 - Ground everything in the tools. Call read_device_interface first to see the exact prototypes to implement, read_hal_interface for the SDK and HAL surface, and read_reference_firmware for a worked starter for this device.

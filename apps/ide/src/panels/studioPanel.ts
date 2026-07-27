@@ -90,7 +90,7 @@ export class StudioPanel {
             this.stopTwin();
             break;
           case "openAssistant":
-            void vscode.commands.executeCommand("openhome.openAssistant");
+            void vscode.commands.executeCommand("chipwright.openAssistant");
             break;
         }
       },
@@ -105,7 +105,7 @@ export class StudioPanel {
   // webview never receives a premature "no device" init that would pop the creation wizard.
   private static ensurePanel(context: vscode.ExtensionContext): StudioPanel {
     if (StudioPanel.current === undefined) {
-      const panel = vscode.window.createWebviewPanel("openhomeStudio", "Chipwright", vscode.ViewColumn.Beside, {
+      const panel = vscode.window.createWebviewPanel("chipwrightStudio", "Chipwright", vscode.ViewColumn.Beside, {
         enableScripts: true,
         retainContextWhenHidden: true,
         localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, "media")],
@@ -242,7 +242,7 @@ export class StudioPanel {
     this.overrideManifest = undefined;
     this.currentForm = form;
     this.post({ type: "saved", source: vscode.workspace.asRelativePath(target) });
-    void vscode.commands.executeCommand("openhome.revealDevice", target);
+    void vscode.commands.executeCommand("chipwright.revealDevice", target);
   }
 
   private async promptSaveTarget(form: DeviceForm): Promise<vscode.Uri | null> {

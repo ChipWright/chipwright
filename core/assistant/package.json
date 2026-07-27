@@ -2,13 +2,13 @@
   "name": "@chipwright/assistant",
   "version": "0.0.0",
   "private": true,
-  "description": "Provider-agnostic AI development assistant for OpenHome Studio: a grounded, tool-using agent that diagnoses devices and proposes DDL edits, verified against the real compiler before they reach you",
+  "description": "Provider-agnostic AI development assistant for Chipwright: a grounded, tool-using agent that diagnoses devices and proposes DDL edits, verified against the real compiler before they reach you",
   "license": "Elastic-2.0",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "openhome-assist": "./dist/cli.js"
+    "chipwright-assist": "./dist/cli.js"
   },
   "files": [
     "dist"

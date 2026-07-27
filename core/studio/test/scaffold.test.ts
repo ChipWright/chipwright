@@ -38,10 +38,10 @@ test("the module implements the generated prototypes and registers each capabili
   assert.ok(module);
   const src = module.contents;
   assert.match(src, /#include "smart_thermostat_interface\.h"/);
-  assert.match(src, /oh_status_t oh_temperature_sensor_read\(float \*out_value\)/);
-  assert.match(src, /oh_status_t oh_hvac_set_mode\(oh_hvac_mode_t mode\)/);
-  assert.match(src, /oh_hal_register_sensor\("temperature_sensor", "celsius", temperature_sensor_driver\)/);
-  assert.match(src, /oh_hal_register_actuator\("hvac", hvac_driver\)/);
+  assert.match(src, /cw_status_t cw_temperature_sensor_read\(float \*out_value\)/);
+  assert.match(src, /cw_status_t cw_hvac_set_mode\(cw_hvac_mode_t mode\)/);
+  assert.match(src, /cw_hal_register_sensor\("temperature_sensor", "celsius", temperature_sensor_driver\)/);
+  assert.match(src, /cw_hal_register_actuator\("hvac", hvac_driver\)/);
 });
 
 test("does not scaffold from a manifest that does not compile", () => {
@@ -65,7 +65,7 @@ test("the scaffolded module compiles against the generated interface and the SDK
   const module = scaffold(THERMOSTAT).files.find((f) => f.path.endsWith(".c"));
   assert.ok(iface && module);
 
-  const dir = mkdtempSync(join(tmpdir(), "openhome-scaffold-"));
+  const dir = mkdtempSync(join(tmpdir(), "chipwright-scaffold-"));
   try {
     writeFileSync(join(dir, "smart_thermostat_interface.h"), iface.contents, "utf8");
     writeFileSync(join(dir, "smart_thermostat.c"), module.contents, "utf8");

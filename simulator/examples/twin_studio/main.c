@@ -7,9 +7,9 @@
 
 #define _POSIX_C_SOURCE 200809L
 
-#include "openhome/hal.h"
-#include "openhome/sdk.h"
-#include "openhome/sim.h"
+#include "chipwright/hal.h"
+#include "chipwright/sdk.h"
+#include "chipwright/sim.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,29 +21,29 @@ typedef struct {
   unsigned interval_ms;
   float initial;
   float step;
-  oh_fault_kind_t fault;
+  cw_fault_kind_t fault;
   long fault_at;
   float offset;
 } twin_args_t;
 
-static void ndjson_sink(const oh_telemetry_sample_t *sample, void *ctx) {
+static void ndjson_sink(const cw_telemetry_sample_t *sample, void *ctx) {
   (void)ctx;
   printf("{\"metric\":\"%s\",\"value\":%.2f,\"unit\":\"%s\"}\n", sample->metric,
          (double)sample->value, sample->unit);
   fflush(stdout);
 }
 
-static oh_fault_kind_t parse_fault(const char *name) {
+static cw_fault_kind_t parse_fault(const char *name) {
   if (strcmp(name, "stuck") == 0) {
-    return OH_FAULT_STUCK;
+    return CW_FAULT_STUCK;
   }
   if (strcmp(name, "fail") == 0) {
-    return OH_FAULT_FAIL;
+    return CW_FAULT_FAIL;
   }
   if (strcmp(name, "offset") == 0) {
-    return OH_FAULT_OFFSET;
+    return CW_FAULT_OFFSET;
   }
-  return OH_FAULT_NONE;
+  return CW_FAULT_NONE;
 }
 
 static const char *option_value(int argc, char **argv, int index) {
@@ -88,34 +88,34 @@ int main(int argc, char **argv) {
       .interval_ms = 200,
       .initial = 21.0f,
       .step = 0.5f,
-      .fault = OH_FAULT_NONE,
+      .fault = CW_FAULT_NONE,
       .fault_at = -1,
       .offset = 5.0f,
   };
   parse_args(argc, argv, &args);
 
-  oh_sim_source_t source;
-  oh_fault_sensor_t sensor;
-  oh_sim_source_init(&source, args.initial, args.step);
-  oh_fault_sensor_init(&sensor, oh_sim_source_driver(&source));
+  cw_sim_source_t source;
+  cw_fault_sensor_t sensor;
+  cw_sim_source_init(&source, args.initial, args.step);
+  cw_fault_sensor_init(&sensor, cw_sim_source_driver(&source));
 
-  oh_hal_reset();
-  oh_hal_register_sensor("temperature_sensor", "celsius", oh_fault_sensor_driver(&sensor));
+  cw_hal_reset();
+  cw_hal_register_sensor("temperature_sensor", "celsius", cw_fault_sensor_driver(&sensor));
 
-  const oh_device_t device = {.name = "smart_thermostat"};
-  oh_device_init(&device);
+  const cw_device_t device = {.name = "smart_thermostat"};
+  cw_device_init(&device);
 
-  oh_telemetry_set_sink(ndjson_sink, NULL);
+  cw_telemetry_set_sink(ndjson_sink, NULL);
   for (unsigned tick = 0; tick < args.ticks; tick++) {
-    if (args.fault != OH_FAULT_NONE && args.fault_at >= 0 && (long)tick == args.fault_at) {
-      const oh_fault_config_t config = {.kind = args.fault, .offset = args.offset};
-      oh_fault_sensor_set(&sensor, config);
+    if (args.fault != CW_FAULT_NONE && args.fault_at >= 0 && (long)tick == args.fault_at) {
+      const cw_fault_config_t config = {.kind = args.fault, .offset = args.offset};
+      cw_fault_sensor_set(&sensor, config);
     }
-    oh_device_run(&device, 1);
+    cw_device_run(&device, 1);
     if (tick + 1 < args.ticks) {
       sleep_ms(args.interval_ms);
     }
   }
-  oh_telemetry_set_sink(NULL, NULL);
+  cw_telemetry_set_sink(NULL, NULL);
   return 0;
 }

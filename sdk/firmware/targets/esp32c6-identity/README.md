@@ -1,7 +1,7 @@
 # Per-device identity on the ESP32-C6
 
 This target brings the cloud's security framework onto real silicon. On first boot the device
-asks the OpenHome cloud to provision it: the cloud's certificate authority registers the
+asks the Chipwright cloud to provision it: the cloud's certificate authority registers the
 device, mints it an Ed25519 key pair, and returns a certificate binding the device id to its
 public key, signed by the CA. The device stores that identity in NVS so it survives a reboot,
 and the private key never leaves the chip.
@@ -36,7 +36,7 @@ Configure Wi-Fi and the cloud URL (these live only in the gitignored `sdkconfig`
 
 ```sh
 idf.py -C sdk/firmware/targets/esp32c6-identity set-target esp32c6
-idf.py -C sdk/firmware/targets/esp32c6-identity menuconfig   # set OpenHome Identity options
+idf.py -C sdk/firmware/targets/esp32c6-identity menuconfig   # set Chipwright Identity options
 idf.py -C sdk/firmware/targets/esp32c6-identity -p <port> flash
 ```
 
@@ -61,6 +61,6 @@ identity esp32c6-48f6eec4e2d4: VERIFIED (CA-issued, key on device, persisted)
   toolchain). The cloud half (identity issuance and certificate verification) is covered by the
   cloud package's tests.
 - Provisioning uses HTTP for the LAN demo. Production provisioning should use HTTPS, which the
-  cloud serves when `OPENHOME_TLS_CERT` and `OPENHOME_TLS_KEY` are set (see `cloud/README.md`).
+  cloud serves when `CHIPWRIGHT_TLS_CERT` and `CHIPWRIGHT_TLS_KEY` are set (see `cloud/README.md`).
 - This is the identity layer only. Secure boot and flash encryption (which burn one-way eFuses)
   are deliberately not enabled here so the board stays reusable for the other targets.

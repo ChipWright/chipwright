@@ -1,4 +1,4 @@
-// Public API of the OpenHome marketplace: the package format, signing, the registry, and
+// Public API of the Chipwright marketplace: the package format, signing, the registry, and
 // the pack and install flows. A package manager or IDE builds on these; the command line
 // in cli.ts is one such consumer.
 

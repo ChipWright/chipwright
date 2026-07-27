@@ -4,7 +4,7 @@
 #define _DEFAULT_SOURCE
 #define _DARWIN_C_SOURCE
 
-#include "openhome/test.h"
+#include "chipwright/test.h"
 
 #include "target_hil.h"
 
@@ -19,7 +19,7 @@
 // Hardware-in-the-loop backend (branch 6). It drives a real board over its serial console:
 // the reference firmware streams telemetry as "telemetry metric=<key> value=<v> unit=<u>"
 // lines, which this backend parses to satisfy read_sensor, so the same acceptance suites run
-// against physical silicon unchanged. Enable it by setting OPENHOME_HIL_PORT to the board's
+// against physical silicon unchanged. Enable it by setting CHIPWRIGHT_HIL_PORT to the board's
 // serial device; without it the target reports unavailable and the runner skips it, so CI
 // (which has no board) is unaffected.
 //
@@ -57,7 +57,7 @@ static int read_line(char *buf, size_t cap, double timeout_s) {
   return -1;
 }
 
-static oh_status_t hil_connect(void *ctx) {
+static cw_status_t hil_connect(void *ctx) {
   (void)ctx;
   // Allow time for the board to reset and boot after the port opens, then confirm it is
   // actually streaming telemetry.
@@ -66,13 +66,13 @@ static oh_status_t hil_connect(void *ctx) {
   while (monotonic_seconds() < deadline) {
     if (read_line(line, sizeof line, deadline - monotonic_seconds()) >= 0 &&
         strstr(line, "telemetry") != NULL) {
-      return OH_OK;
+      return CW_OK;
     }
   }
-  return OH_ERR_IO;
+  return CW_ERR_IO;
 }
 
-static oh_status_t hil_read_sensor(void *ctx, const char *key, float *out_value) {
+static cw_status_t hil_read_sensor(void *ctx, const char *key, float *out_value) {
   (void)ctx;
   char line[160];
   char metric[64];
@@ -85,22 +85,22 @@ static oh_status_t hil_read_sensor(void *ctx, const char *key, float *out_value)
     if (sscanf(line, "telemetry metric=%63s value=%f", metric, &value) == 2 &&
         strcmp(metric, key) == 0) {
       *out_value = value;
-      return OH_OK;
+      return CW_OK;
     }
   }
   // The key never appeared in the stream: unknown sensor, as far as this target can tell.
-  return OH_ERR_NOT_FOUND;
+  return CW_ERR_NOT_FOUND;
 }
 
-static oh_status_t hil_set_mode(void *ctx, const char *key, int mode) {
+static cw_status_t hil_set_mode(void *ctx, const char *key, int mode) {
   (void)ctx;
   char command[96];
   const int written = snprintf(command, sizeof command, "command key=%s mode=%d\n", key, mode);
   if (written <= 0 || (size_t)written >= sizeof command) {
-    return OH_ERR_INVALID;
+    return CW_ERR_INVALID;
   }
   if (write(g_fd, command, (size_t)written) != written) {
-    return OH_ERR_IO;
+    return CW_ERR_IO;
   }
 
   // Wait for the firmware to acknowledge the applied mode, so a passing check means the board
@@ -114,21 +114,21 @@ static oh_status_t hil_set_mode(void *ctx, const char *key, int mode) {
       break;
     }
     if (strcmp(line, expected) == 0) {
-      return OH_OK;
+      return CW_OK;
     }
   }
-  return OH_ERR_IO;
+  return CW_ERR_IO;
 }
 
-void oh_test_target_hil_init(oh_test_target_t *target) {
+void cw_test_target_hil_init(cw_test_target_t *target) {
   target->connect = hil_connect;
   target->read_sensor = hil_read_sensor;
   target->set_mode = hil_set_mode;
   target->ctx = NULL;
 
-  const char *port = getenv("OPENHOME_HIL_PORT");
+  const char *port = getenv("CHIPWRIGHT_HIL_PORT");
   if (port == NULL) {
-    target->name = "hil (set OPENHOME_HIL_PORT to enable)";
+    target->name = "hil (set CHIPWRIGHT_HIL_PORT to enable)";
     target->available = false;
     return;
   }

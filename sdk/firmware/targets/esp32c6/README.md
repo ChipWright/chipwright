@@ -56,7 +56,7 @@ uses to drive and verify actuators, so the same suites that run on the twin also
 actuator control on real silicon. Run them against the board with:
 
 ```sh
-OPENHOME_HIL_PORT=/dev/cu.usbmodemXXXX tests/suites/thermostat/build/thermostat_suite
+CHIPWRIGHT_HIL_PORT=/dev/cu.usbmodemXXXX tests/suites/thermostat/build/thermostat_suite
 ```
 
 ## Notes

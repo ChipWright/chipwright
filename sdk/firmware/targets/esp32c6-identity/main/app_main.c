@@ -1,4 +1,4 @@
-// Per-device identity on the ESP32-C6. On first boot the device asks the OpenHome cloud to
+// Per-device identity on the ESP32-C6. On first boot the device asks the Chipwright cloud to
 // provision it: the cloud's certificate authority registers the device, mints it an Ed25519
 // key pair, and returns a certificate binding the device id to its public key, signed by the
 // CA. The device stores that identity in NVS so it survives a reboot, and it never leaves the
@@ -33,10 +33,10 @@
 #include "nvs_flash.h"
 #include "sodium.h"
 
-static const char *TAG = "openhome.identity";
+static const char *TAG = "chipwright.identity";
 
 #define WIFI_CONNECTED_BIT BIT0
-#define NVS_NAMESPACE "openhome_id"
+#define NVS_NAMESPACE "chipwright_id"
 #define NVS_KEY_IDENTITY "identity"
 #define NVS_KEY_CA "ca"
 
@@ -68,8 +68,8 @@ static esp_err_t wifi_connect(void) {
   ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, wifi_event_handler, NULL));
 
   wifi_config_t config = {0};
-  strncpy((char *)config.sta.ssid, CONFIG_OH_WIFI_SSID, sizeof config.sta.ssid - 1);
-  strncpy((char *)config.sta.password, CONFIG_OH_WIFI_PASSWORD, sizeof config.sta.password - 1);
+  strncpy((char *)config.sta.ssid, CONFIG_CW_WIFI_SSID, sizeof config.sta.ssid - 1);
+  strncpy((char *)config.sta.password, CONFIG_CW_WIFI_PASSWORD, sizeof config.sta.password - 1);
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
   ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &config));
   ESP_ERROR_CHECK(esp_wifi_start());
@@ -224,7 +224,7 @@ static bool nvs_get_string(nvs_handle_t handle, const char *key, char **out) {
 static char *provision(const char *base_url, const char *device_id, char **ca_out) {
   char body[128];
   snprintf(body, sizeof body, "{\"deviceId\":\"%s\",\"deviceType\":\"%s\"}", device_id,
-           CONFIG_OH_DEVICE_TYPE);
+           CONFIG_CW_DEVICE_TYPE);
   char url[192];
   snprintf(url, sizeof url, "%s/provision", base_url);
   char *response = http_post_json(url, body);
@@ -384,7 +384,7 @@ void app_main(void) {
       ESP_LOGE(TAG, "wifi connect failed; cannot provision");
       return;
     }
-    identity_json = provision(CONFIG_OH_CLOUD_URL, device_id, &ca_pem);
+    identity_json = provision(CONFIG_CW_CLOUD_URL, device_id, &ca_pem);
     if (identity_json == NULL) {
       ESP_LOGE(TAG, "provisioning failed");
       return;

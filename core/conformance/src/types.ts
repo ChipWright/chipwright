@@ -3,7 +3,7 @@ import type { MatterCluster } from "./clusters.js";
 
 // The conformance engine revision. Combined with the Matter data model version at report time, it
 // makes reports reproducible: the same device and versions always yield the same report.
-export const SPEC_VERSION = "openhome-conformance-0.2";
+export const SPEC_VERSION = "chipwright-conformance-0.2";
 
 export type ConformanceVerdict = "conformant" | "conformant_with_gaps" | "nonconformant";
 

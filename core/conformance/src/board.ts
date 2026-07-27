@@ -3,7 +3,7 @@
 // device-class conformance: one says a definition is a valid thermostat, the other says a board
 // truly runs it. The "supported boards" view is just the rendered set of these records.
 
-export const BOARD_RECORD_SCHEMA = "openhome-board-conformance/1";
+export const BOARD_RECORD_SCHEMA = "chipwright-board-conformance/1";
 
 // One run of the acceptance suite against a real board. Committed alongside the BSP as its proof.
 export interface BoardConformanceRecord {

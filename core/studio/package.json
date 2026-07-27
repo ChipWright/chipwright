@@ -2,7 +2,7 @@
   "name": "@chipwright/studio-core",
   "version": "0.0.0",
   "private": true,
-  "description": "Shell-agnostic core for the OpenHome Studio developer IDE: manifest editing, artifact generation, and live twin control, consumed by the VS Code extension and any future standalone app",
+  "description": "Shell-agnostic core for the Chipwright developer IDE: manifest editing, artifact generation, and live twin control, consumed by the VS Code extension and any future standalone app",
   "license": "Elastic-2.0",
   "type": "module",
   "main": "./dist/index.js",

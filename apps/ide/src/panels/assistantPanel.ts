@@ -22,7 +22,7 @@ import {
 } from "@chipwright/assistant";
 import { StudioPanel } from "./studioPanel.js";
 
-const SECRET_KEY = "openhome.assistant.apiKey";
+const SECRET_KEY = "chipwright.assistant.apiKey";
 
 type InboundMessage =
   | { type: "ready" | "openSettings" }
@@ -78,7 +78,7 @@ export class AssistantPanel {
   static show(context: vscode.ExtensionContext, uri?: vscode.Uri): void {
     const column = vscode.ViewColumn.Beside;
     if (AssistantPanel.current === undefined) {
-      const panel = vscode.window.createWebviewPanel("openhomeAssistant", "Chipwright Assistant", column, {
+      const panel = vscode.window.createWebviewPanel("chipwrightAssistant", "Chipwright Assistant", column, {
         enableScripts: true,
         retainContextWhenHidden: true,
         localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, "media")],
@@ -108,7 +108,7 @@ export class AssistantPanel {
   }
 
   private config(): LlmConfig | { error: string } {
-    const settings = vscode.workspace.getConfiguration("openhome.assistant");
+    const settings = vscode.workspace.getConfiguration("chipwright.assistant");
     const provider = (settings.get<string>("provider") ?? "anthropic") as ProviderName;
     const model = settings.get<string>("model");
     const baseUrl = settings.get<string>("baseUrl");
@@ -269,7 +269,7 @@ export class AssistantPanel {
       await vscode.workspace.fs.writeFile(target, new TextEncoder().encode(finalYaml));
       this.activeUri = target;
       this.post({ type: "applied", index, source: vscode.workspace.asRelativePath(target) });
-      void vscode.commands.executeCommand("openhome.revealDevice", target);
+      void vscode.commands.executeCommand("chipwright.revealDevice", target);
     } catch (error) {
       this.post({
         type: "applyError",
@@ -303,7 +303,7 @@ export class AssistantPanel {
   // API key is included only here, on an explicit open, rather than in every context
   // message, so it is not kept in the webview beyond editing it.
   private async sendSettings(): Promise<void> {
-    const settings = vscode.workspace.getConfiguration("openhome.assistant");
+    const settings = vscode.workspace.getConfiguration("chipwright.assistant");
     this.post({
       type: "settings",
       provider: settings.get<string>("provider") ?? "anthropic",
@@ -319,7 +319,7 @@ export class AssistantPanel {
     baseUrl: string;
     apiKey: string;
   }): Promise<void> {
-    const settings = vscode.workspace.getConfiguration("openhome.assistant");
+    const settings = vscode.workspace.getConfiguration("chipwright.assistant");
     await settings.update("provider", msg.provider, vscode.ConfigurationTarget.Global);
     await settings.update("model", msg.model, vscode.ConfigurationTarget.Global);
     await settings.update("baseUrl", msg.baseUrl, vscode.ConfigurationTarget.Global);
@@ -336,7 +336,7 @@ export class AssistantPanel {
   // is set, so an unconfigured assistant shows just the settings icon and nothing else.
   private async sendContext(): Promise<void> {
     const device = this.deviceUri();
-    const settings = vscode.workspace.getConfiguration("openhome.assistant");
+    const settings = vscode.workspace.getConfiguration("chipwright.assistant");
     const provider = (settings.get<string>("provider") ?? "anthropic") as ProviderName;
     const model = settings.get<string>("model");
     const hasKey = ((await this.context.secrets.get(SECRET_KEY)) ?? "").length > 0;

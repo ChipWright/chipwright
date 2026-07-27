@@ -25,68 +25,68 @@
   ],
   "main": "./dist/extension.js",
   "activationEvents": [
-    "onView:openhome.devices",
-    "onCommand:openhome.newDevice",
-    "onCommand:openhome.openManifest",
-    "onCommand:openhome.openDesigner",
-    "onCommand:openhome.debugTwin",
-    "onCommand:openhome.openAssistant"
+    "onView:chipwright.devices",
+    "onCommand:chipwright.newDevice",
+    "onCommand:chipwright.openManifest",
+    "onCommand:chipwright.openDesigner",
+    "onCommand:chipwright.debugTwin",
+    "onCommand:chipwright.openAssistant"
   ],
   "contributes": {
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "openhome",
+          "id": "chipwright",
           "title": "Chipwright",
           "icon": "media/activity-icon.svg"
         }
       ]
     },
     "views": {
-      "openhome": [
+      "chipwright": [
         {
-          "id": "openhome.devices",
+          "id": "chipwright.devices",
           "name": ""
         }
       ]
     },
     "viewsWelcome": [
       {
-        "view": "openhome.devices",
-        "contents": "No devices found here.\n\nCreate one from a template, or start from scratch.\n[Create device](command:openhome.newDevice)\n\nAlready have a manifest? Pick the file directly.\n[Open a device manifest](command:openhome.openManifest)"
+        "view": "chipwright.devices",
+        "contents": "No devices found here.\n\nCreate one from a template, or start from scratch.\n[Create device](command:chipwright.newDevice)\n\nAlready have a manifest? Pick the file directly.\n[Open a device manifest](command:chipwright.openManifest)"
       }
     ],
     "commands": [
       {
-        "command": "openhome.newDevice",
+        "command": "chipwright.newDevice",
         "title": "New Device",
         "category": "Chipwright",
         "icon": "$(add)"
       },
       {
-        "command": "openhome.openManifest",
+        "command": "chipwright.openManifest",
         "title": "Open Device Manifest...",
         "category": "Chipwright",
         "icon": "$(go-to-file)"
       },
       {
-        "command": "openhome.openDesigner",
+        "command": "chipwright.openDesigner",
         "title": "Open Device Designer",
         "category": "Chipwright"
       },
       {
-        "command": "openhome.debugTwin",
+        "command": "chipwright.debugTwin",
         "title": "Debug Twin",
         "category": "Chipwright"
       },
       {
-        "command": "openhome.openAssistant",
+        "command": "chipwright.openAssistant",
         "title": "Open Assistant",
         "category": "Chipwright",
         "icon": "$(sparkle)"
       },
       {
-        "command": "openhome.refreshDevices",
+        "command": "chipwright.refreshDevices",
         "title": "Refresh Devices",
         "category": "Chipwright",
         "icon": "$(refresh)"
@@ -95,25 +95,25 @@
     "menus": {
       "view/title": [
         {
-          "command": "openhome.newDevice",
-          "when": "view == openhome.devices",
+          "command": "chipwright.newDevice",
+          "when": "view == chipwright.devices",
           "group": "navigation@1"
         },
         {
-          "command": "openhome.openAssistant",
-          "when": "view == openhome.devices",
+          "command": "chipwright.openAssistant",
+          "when": "view == chipwright.devices",
           "group": "navigation@2"
         },
         {
-          "command": "openhome.refreshDevices",
-          "when": "view == openhome.devices",
+          "command": "chipwright.refreshDevices",
+          "when": "view == chipwright.devices",
           "group": "navigation@3"
         }
       ],
       "view/item/context": [
         {
-          "command": "openhome.openAssistant",
-          "when": "view == openhome.devices",
+          "command": "chipwright.openAssistant",
+          "when": "view == chipwright.devices",
           "group": "inline"
         }
       ]
@@ -121,7 +121,7 @@
     "configuration": {
       "title": "Chipwright",
       "properties": {
-        "openhome.assistant.provider": {
+        "chipwright.assistant.provider": {
           "type": "string",
           "enum": [
             "anthropic",
@@ -131,12 +131,12 @@
           "default": "anthropic",
           "description": "LLM provider for the AI assistant. openai-compatible works with OpenAI, OpenRouter, and local servers via a base URL."
         },
-        "openhome.assistant.model": {
+        "chipwright.assistant.model": {
           "type": "string",
           "default": "",
           "description": "Model id to use. Leave blank to use the provider's default."
         },
-        "openhome.assistant.baseUrl": {
+        "chipwright.assistant.baseUrl": {
           "type": "string",
           "default": "",
           "description": "Base URL for the openai-compatible provider, e.g. http://localhost:11434/v1 for Ollama. The API key is set separately and stored securely."

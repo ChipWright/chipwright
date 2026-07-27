@@ -44,7 +44,7 @@ function layout(deviceName: string, page: Page, pages: Page[]): string {
 <body>
 <header class="site-header">
   <div class="site-wordmark">
-    <span class="site-mark">OpenHome</span>
+    <span class="site-mark">Chipwright</span>
     <span class="site-device">${escapeHtml(deviceName)}</span>
   </div>
   <nav class="site-nav">
@@ -55,7 +55,7 @@ ${nav}
 ${page.body}
 </main>
 <footer class="site-footer">
-  <p>Generated from the device manifest by OpenHome Studio. Do not edit by hand.</p>
+  <p>Generated from the device manifest by Chipwright. Do not edit by hand.</p>
 </footer>
 </body>
 </html>

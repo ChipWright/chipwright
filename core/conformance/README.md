@@ -1,4 +1,4 @@
-# @openhome/conformance
+# @chipwright/conformance
 
 The conformance engine judges whether a device definition is a valid instance of the device
 **class** it claims to be, and maps that class to its Matter device type. A capability is a
@@ -33,7 +33,7 @@ connectedhomeip `data_model` device type XML), so "conformant" tracks what ecosy
 recognize. Regenerate it from a local checkout and commit the result:
 
 ```sh
-pnpm --filter @openhome/conformance generate:device-types \
+pnpm --filter @chipwright/conformance generate:device-types \
   ~/esp/esp-matter/connectedhomeip/connectedhomeip/data_model/1.4/device_types 1.4 \
   > core/conformance/src/matter-device-types.generated.ts
 ```
@@ -44,18 +44,18 @@ are recorded as optional, which is lenient by design and never wrongly fails a d
 ## CLI
 
 ```sh
-openhome-conform <device.yaml> [--class <class>] [--json]
+chipwright-conform <device.yaml> [--class <class>] [--json]
 ```
 
 ```
-$ openhome-conform examples/thermostat/device.yaml
+$ chipwright-conform examples/thermostat/device.yaml
 class:              thermostat
 matter device type: Thermostat (0x0301)
 verdict:            conformant
 clusters:
   [ok] Thermostat (0x0201) <- hvac
   [ok] TemperatureMeasurement (0x0402) <- temperature_sensor
-spec:               openhome-conformance-0.1
+spec:               chipwright-conformance-0.1
 ```
 
 `--class` overrides the profile chosen from the device's category. `--json` prints the raw
@@ -65,7 +65,7 @@ marketplace publish.
 ## Library
 
 ```ts
-import { conform, conformManifest } from "@openhome/conformance";
+import { conform, conformManifest } from "@chipwright/conformance";
 
 const report = conformManifest(yamlSource);       // parse + judge
 // or conform(ir) against an already-parsed DeviceIR
@@ -79,7 +79,7 @@ device and issued by the holder of a known authority key. This is the same suppl
 model as firmware signing in the cloud and package signing in the marketplace.
 
 ```ts
-import { ConformanceAuthority, verifySignedReport } from "@openhome/conformance";
+import { ConformanceAuthority, verifySignedReport } from "@chipwright/conformance";
 
 const authority = new ConformanceAuthority();       // or new ConformanceAuthority(savedKeys)
 const signed = authority.sign(conformManifest(yamlSource));
@@ -102,13 +102,13 @@ submitter), and the support tier is derived from it rather than typed into a lis
 
 ```sh
 # mint a record by piping a HIL acceptance run
-OPENHOME_HIL_PORT=/dev/tty.usbmodemXXXX make -C tests/suites/thermostat run | \
-  openhome-board record --chip esp32-c6 --bsp esp32 --class thermostat \
+CHIPWRIGHT_HIL_PORT=/dev/tty.usbmodemXXXX make -C tests/suites/thermostat run | \
+  chipwright-board record --chip esp32-c6 --bsp esp32 --class thermostat \
     --commit "$(git rev-parse --short HEAD)" --toolchain esp-idf-5.3.1 --submitter "you" \
     > sdk/firmware/bsp/esp32/conformance/thermostat-esp32c6.json
 
 # render the supported-boards table from committed records
-openhome-board list sdk/firmware/bsp
+chipwright-board list sdk/firmware/bsp
 ```
 
 Records live next to the BSP they prove (`sdk/firmware/bsp/<chip>/conformance/`, Apache-2.0). The

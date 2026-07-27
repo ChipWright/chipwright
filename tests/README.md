@@ -6,7 +6,7 @@ hardware later, so the same assertions gate both.
 
 ## What works today
 
-- Capability-level assertion API (`OH_EXPECT`) and a suite runner
+- Capability-level assertion API (`CW_EXPECT`) and a suite runner
 - Abstract device target: `connect`, `read_sensor`, `set_mode`
 - Twin target backend, driving the simulator, SDK, and protocol layer
 - Test categories: functional (thermostat acceptance), connectivity (commissioning
@@ -17,7 +17,7 @@ hardware later, so the same assertions gate both.
 
 ## Layout
 
-- `include/openhome/test.h` — assertion API and the device target interface
+- `include/chipwright/test.h` — assertion API and the device target interface
 - `src/assert.c` — suite runner
 - `src/target_twin.c` — twin-backed target
 - `src/target_hil.c` — hardware-in-the-loop target (drives a real board over serial)
@@ -38,13 +38,13 @@ make -C tests test
 Against a real board as well, over its serial console:
 
 ```sh
-OPENHOME_HIL_PORT=/dev/cu.usbmodemXXXX make -C tests test
+CHIPWRIGHT_HIL_PORT=/dev/cu.usbmodemXXXX make -C tests test
 ```
 
 The hardware-in-the-loop target reads the board's telemetry stream to satisfy `read_sensor`
 and writes `command key=<key> mode=<mode>` lines (confirmed by the firmware's `actuator ...`
 acknowledgment) to satisfy `set_mode`, so the same suites gate the twin and physical silicon
-unchanged. Without `OPENHOME_HIL_PORT` the target reports itself unavailable and is skipped.
+unchanged. Without `CHIPWRIGHT_HIL_PORT` the target reports itself unavailable and is skipped.
 
 ## Not yet implemented
 

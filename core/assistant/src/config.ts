@@ -36,30 +36,30 @@ export function defaultModel(provider: ProviderName): string {
 // `openai-compatible`. A missing key is allowed only for a local base URL, since local
 // servers such as Ollama do not require one.
 export function loadConfigFromEnv(env: NodeJS.ProcessEnv = process.env): LlmConfig {
-  const raw = (env["OPENHOME_LLM_PROVIDER"] ?? "anthropic").toLowerCase();
+  const raw = (env["CHIPWRIGHT_LLM_PROVIDER"] ?? "anthropic").toLowerCase();
   const provider: ProviderName = raw === "openai" ? "openai-compatible" : (raw as ProviderName);
   if (!PROVIDERS.includes(provider)) {
     throw new ConfigError(
-      `unknown OPENHOME_LLM_PROVIDER "${raw}" (expected anthropic, gemini, or openai-compatible)`,
+      `unknown CHIPWRIGHT_LLM_PROVIDER "${raw}" (expected anthropic, gemini, or openai-compatible)`,
     );
   }
 
-  const apiKey = env["OPENHOME_LLM_API_KEY"] ?? "";
-  const baseUrl = env["OPENHOME_LLM_BASE_URL"];
+  const apiKey = env["CHIPWRIGHT_LLM_API_KEY"] ?? "";
+  const baseUrl = env["CHIPWRIGHT_LLM_BASE_URL"];
   const isLocal = baseUrl !== undefined && /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])/i.test(baseUrl);
   if (apiKey.length === 0 && !isLocal) {
-    throw new ConfigError("OPENHOME_LLM_API_KEY is required (set OPENHOME_LLM_BASE_URL to a local server to run keyless)");
+    throw new ConfigError("CHIPWRIGHT_LLM_API_KEY is required (set CHIPWRIGHT_LLM_BASE_URL to a local server to run keyless)");
   }
 
   const config: LlmConfig = {
     provider,
     apiKey,
-    model: env["OPENHOME_LLM_MODEL"] ?? defaultModel(provider),
+    model: env["CHIPWRIGHT_LLM_MODEL"] ?? defaultModel(provider),
   };
   if (baseUrl !== undefined) {
     config.baseUrl = baseUrl;
   }
-  const maxTokens = env["OPENHOME_LLM_MAX_TOKENS"];
+  const maxTokens = env["CHIPWRIGHT_LLM_MAX_TOKENS"];
   if (maxTokens !== undefined && Number.isFinite(Number(maxTokens))) {
     config.maxTokens = Number(maxTokens);
   }

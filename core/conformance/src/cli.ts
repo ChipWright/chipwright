@@ -1,4 +1,4 @@
-// CLI for the conformance engine: `openhome-conform <device.yaml> [--class <class>] [--json]`.
+// CLI for the conformance engine: `chipwright-conform <device.yaml> [--class <class>] [--json]`.
 // Prints a human-readable report by default, or the raw report with --json. Exits non-zero when
 // the device is nonconformant, so it can gate a build or a publish.
 
@@ -49,7 +49,7 @@ function main(): void {
   const classValueIndex = classIndex >= 0 ? classIndex + 1 : -1;
   const file = args.find((arg, i) => !arg.startsWith("--") && i !== classValueIndex);
   if (file === undefined) {
-    process.stderr.write("usage: openhome-conform <device.yaml> [--class <class>] [--json]\n");
+    process.stderr.write("usage: chipwright-conform <device.yaml> [--class <class>] [--json]\n");
     process.exit(2);
   }
 

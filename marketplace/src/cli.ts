@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// The marketplace command line: the realization of "openhome install <device>". It wires
+// The marketplace command line: the realization of "chipwright install <device>". It wires
 // the pack, sign, publish, resolve, and install flows over a filesystem-backed registry
 // so a developer can share and pull device packages from the terminal. Everything it does
 // is available as a library from index.ts; this file is only argument parsing and output.
@@ -45,17 +45,17 @@ function parseArgs(argv: string[]): Args {
 }
 
 function registryHome(flags: Map<string, string>): string {
-  return flags.get("registry") ?? process.env["OPENHOME_REGISTRY"] ?? join(homedir(), ".openhome");
+  return flags.get("registry") ?? process.env["CHIPWRIGHT_REGISTRY"] ?? join(homedir(), ".chipwright");
 }
 
 function openRegistry(flags: Map<string, string>): PackageRegistry {
   return new PackageRegistry(new FileSystemStore(join(registryHome(flags), "registry")));
 }
 
-// A registry URL from --registry-url or $OPENHOME_REGISTRY_URL selects a remote registry;
+// A registry URL from --registry-url or $CHIPWRIGHT_REGISTRY_URL selects a remote registry;
 // its absence means the local filesystem registry.
 function remoteUrl(flags: Map<string, string>): string | undefined {
-  return flags.get("registry-url") ?? process.env["OPENHOME_REGISTRY_URL"];
+  return flags.get("registry-url") ?? process.env["CHIPWRIGHT_REGISTRY_URL"];
 }
 
 // Loads the publisher identity for this registry home, creating and saving a new one on
@@ -80,20 +80,20 @@ function fingerprint(publicKeyPem: string): string {
   return createHash("sha256").update(publicKeyPem).digest("hex").slice(0, 16);
 }
 
-const USAGE = `openhome - device package manager
+const USAGE = `chipwright - device package manager
 
 Usage:
-  openhome publish [dir]        Pack, sign, and publish the project in dir (default .)
-  openhome install <spec> [--dir target]
+  chipwright publish [dir]        Pack, sign, and publish the project in dir (default .)
+  chipwright install <spec> [--dir target]
                                Install name or name@version into target (default .)
-  openhome search [query]      List packages matching query (all if omitted)
-  openhome info <spec>         Show a package's metadata, versions, and files
-  openhome list                List every published package and its latest version
+  chipwright search [query]      List packages matching query (all if omitted)
+  chipwright info <spec>         Show a package's metadata, versions, and files
+  chipwright list                List every published package and its latest version
 
 Options:
-  --registry <dir>             Local registry home (default $OPENHOME_REGISTRY or ~/.openhome)
+  --registry <dir>             Local registry home (default $CHIPWRIGHT_REGISTRY or ~/.chipwright)
   --registry-url <url>         Use a remote registry service instead of the local one
-                               (default $OPENHOME_REGISTRY_URL)
+                               (default $CHIPWRIGHT_REGISTRY_URL)
 `;
 
 async function main(): Promise<number> {

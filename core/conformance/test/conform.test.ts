@@ -140,6 +140,6 @@ test("conform() works directly on a parsed IR", () => {
   assert.ok(ir);
   const report = conform(ir);
   assert.equal(report.verdict, "conformant");
-  assert.ok(report.specVersion.startsWith("openhome-conformance-0.2"));
+  assert.ok(report.specVersion.startsWith("chipwright-conformance-0.2"));
   assert.ok(report.specVersion.includes("matter-1.4"));
 });
