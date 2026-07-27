@@ -38,6 +38,7 @@ export {
 } from "./telemetry.js";
 export {
   twinArgs,
+  twinPlan,
   spawnTwin,
   twinBinaryPath,
   TWIN_SOURCE_DIR,
@@ -45,4 +46,6 @@ export {
   type TwinOptions,
   type TwinHandlers,
   type TwinHandle,
+  type TwinSensorPlan,
+  type TwinCapabilityPlan,
 } from "./twin.js";

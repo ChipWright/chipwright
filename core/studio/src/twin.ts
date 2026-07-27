@@ -6,6 +6,7 @@
 
 import { spawn } from "node:child_process";
 import { join } from "node:path";
+import { parseManifest } from "@chipwright/device-engine";
 import { readTelemetry, type TwinSample } from "./telemetry.js";
 
 export type TwinFault = "none" | "stuck" | "fail" | "offset";
@@ -29,6 +30,55 @@ export interface TwinOptions {
   // Tick at which to inject the fault; negative or undefined means no injection.
   faultAt?: number;
   offset?: number;
+  // Path to a device descriptor so the twin runs the open device's capabilities rather than
+  // its built-in default. Produced by twinPlan and written to a temp file by the shell.
+  descriptorPath?: string;
+  // Sensor key the fault applies to; when unset the twin faults its first sensor.
+  faultTarget?: string;
+}
+
+// A sensor exposed by the twin: its key and the unit its telemetry is reported in. The shell
+// uses this to label chart series and to offer a fault target per sensor.
+export interface TwinSensorPlan {
+  key: string;
+  unit: string;
+}
+
+// Everything the shell needs to run a manifest on the twin: the sensors it will stream, its
+// actuators, and the descriptor text to hand the binary. Null when the manifest does not compile.
+export interface TwinCapabilityPlan {
+  deviceName: string;
+  sensors: TwinSensorPlan[];
+  actuators: string[];
+  descriptor: string;
+}
+
+// Derives the twin plan from a manifest: the descriptor text the twin binary consumes plus the
+// capability lists the debugger UI needs. Returns null when the manifest does not compile, so
+// the shell surfaces diagnostics rather than running an empty device.
+export function twinPlan(manifestYaml: string): TwinCapabilityPlan | null {
+  const { ir } = parseManifest(manifestYaml);
+  if (ir === null) {
+    return null;
+  }
+  const sensors: TwinSensorPlan[] = [];
+  const actuators: string[] = [];
+  const lines = [`device ${ir.device.name}`];
+  for (const cap of ir.capabilities) {
+    if (cap.kind === "sensor") {
+      const unit = cap.unit ?? "unitless";
+      sensors.push({ key: cap.key, unit });
+      lines.push(
+        cap.range !== null
+          ? `sensor ${cap.key} ${unit} ${cap.range.min} ${cap.range.max}`
+          : `sensor ${cap.key} ${unit}`,
+      );
+    } else {
+      actuators.push(cap.key);
+      lines.push(`actuator ${cap.key} ${cap.modes.length}`);
+    }
+  }
+  return { deviceName: ir.device.name, sensors, actuators, descriptor: lines.join("\n") + "\n" };
 }
 
 export interface TwinHandlers {
@@ -45,6 +95,9 @@ export interface TwinHandle {
 // flags the caller set so the binary's own defaults apply otherwise.
 export function twinArgs(options: TwinOptions): string[] {
   const args: string[] = [];
+  if (options.descriptorPath !== undefined) {
+    args.push("--descriptor", options.descriptorPath);
+  }
   if (options.ticks !== undefined) {
     args.push("--ticks", String(options.ticks));
   }
@@ -64,6 +117,9 @@ export function twinArgs(options: TwinOptions): string[] {
     }
     if (options.offset !== undefined) {
       args.push("--offset", String(options.offset));
+    }
+    if (options.faultTarget !== undefined && options.faultTarget.length > 0) {
+      args.push("--fault-target", options.faultTarget);
     }
   }
   return args;
