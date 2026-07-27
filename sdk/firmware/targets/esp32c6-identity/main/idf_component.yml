@@ -1,0 +1,5 @@
+dependencies:
+  idf: ">=5.1"
+  # Ed25519 key generation and signature verification. mbedTLS does not implement EdDSA, so
+  # the device uses libsodium, matching the OTA target.
+  libsodium: "^1.0.20"

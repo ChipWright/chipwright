@@ -1,0 +1,15 @@
+CONFIG_IDF_TARGET="esp32c6"
+
+# 8 MB flash on the ESP32-C6-DevKitC-1-N8.
+CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y
+
+# Single-app partition layout with a dedicated NVS for the stored identity.
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+# Wi-Fi station only.
+CONFIG_ESP_WIFI_SOFTAP_SUPPORT=n
+
+# Ed25519 provisioning and verification run on the main task and need more stack than the
+# default, as in the OTA target.
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=16384

@@ -1,0 +1,29 @@
+menu "OpenHome Identity"
+
+    config OH_WIFI_SSID
+        string "Wi-Fi SSID"
+        default "changeme"
+        help
+            SSID of the network the device joins to reach the OpenHome cloud for provisioning.
+
+    config OH_WIFI_PASSWORD
+        string "Wi-Fi password"
+        default "changeme"
+        help
+            Password for the Wi-Fi network.
+
+    config OH_CLOUD_URL
+        string "OpenHome cloud base URL"
+        default "http://192.168.1.100:8091"
+        help
+            Base URL of the running cloud, e.g. http://<host-ip>:8091. The device posts to
+            <url>/provision and fetches the trust root from <url>/ca on first boot.
+
+    config OH_DEVICE_TYPE
+        string "Device type"
+        default "smart_thermostat"
+        help
+            The device type reported at provisioning. Identity is independent of device type;
+            this is what the cloud registry records for the device.
+
+endmenu

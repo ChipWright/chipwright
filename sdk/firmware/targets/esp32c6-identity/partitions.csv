@@ -1,0 +1,7 @@
+# Single-app layout for the ESP32-C6 identity firmware. No OTA slots are needed; the
+# factory app is sized generously to hold libsodium, Wi-Fi, and the HTTP client. NVS holds
+# the provisioned device identity so it persists across reboots.
+# Name,     Type, SubType, Offset,   Size
+nvs,        data, nvs,     0x9000,   0x6000,
+phy_init,   data, phy,     0xf000,   0x1000,
+factory,    app,  factory, 0x10000,  0x300000,
