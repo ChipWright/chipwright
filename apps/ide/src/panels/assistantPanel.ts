@@ -83,6 +83,7 @@ export class AssistantPanel {
         retainContextWhenHidden: true,
         localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, "media")],
       });
+      panel.iconPath = vscode.Uri.joinPath(context.extensionUri, "media", "activity-icon.svg");
       AssistantPanel.current = new AssistantPanel(panel, context);
     } else {
       AssistantPanel.current.panel.reveal(column);

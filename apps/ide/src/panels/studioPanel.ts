@@ -112,6 +112,7 @@ export class StudioPanel {
         retainContextWhenHidden: true,
         localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, "media")],
       });
+      panel.iconPath = vscode.Uri.joinPath(context.extensionUri, "media", "activity-icon.svg");
       StudioPanel.current = new StudioPanel(panel, context);
     } else {
       StudioPanel.current.panel.reveal(vscode.ViewColumn.Beside);
