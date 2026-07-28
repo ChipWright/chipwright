@@ -47,5 +47,6 @@ export {
   type TwinHandlers,
   type TwinHandle,
   type TwinSensorPlan,
+  type TwinActuatorPlan,
   type TwinCapabilityPlan,
 } from "./twin.js";

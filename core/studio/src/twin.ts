@@ -22,10 +22,9 @@ export function twinBinaryPath(repoRoot: string): string {
 export interface TwinOptions {
   // Absolute path to the compiled twin_studio binary.
   binPath: string;
+  // Number of ticks to run, or 0 to stream until stopped.
   ticks?: number;
   intervalMs?: number;
-  initial?: number;
-  step?: number;
   fault?: TwinFault;
   // Tick at which to inject the fault; negative or undefined means no injection.
   faultAt?: number;
@@ -44,12 +43,19 @@ export interface TwinSensorPlan {
   unit: string;
 }
 
+// An actuator exposed by the twin: its key and its modes, so the debugger can offer a control
+// that drives the device and the twin can infer the mode's effect from its name.
+export interface TwinActuatorPlan {
+  key: string;
+  modes: string[];
+}
+
 // Everything the shell needs to run a manifest on the twin: the sensors it will stream, its
 // actuators, and the descriptor text to hand the binary. Null when the manifest does not compile.
 export interface TwinCapabilityPlan {
   deviceName: string;
   sensors: TwinSensorPlan[];
-  actuators: string[];
+  actuators: TwinActuatorPlan[];
   descriptor: string;
 }
 
@@ -62,7 +68,7 @@ export function twinPlan(manifestYaml: string): TwinCapabilityPlan | null {
     return null;
   }
   const sensors: TwinSensorPlan[] = [];
-  const actuators: string[] = [];
+  const actuators: TwinActuatorPlan[] = [];
   const lines = [`device ${ir.device.name}`];
   for (const cap of ir.capabilities) {
     if (cap.kind === "sensor") {
@@ -74,8 +80,8 @@ export function twinPlan(manifestYaml: string): TwinCapabilityPlan | null {
           : `sensor ${cap.key} ${unit}`,
       );
     } else {
-      actuators.push(cap.key);
-      lines.push(`actuator ${cap.key} ${cap.modes.length}`);
+      actuators.push({ key: cap.key, modes: cap.modes });
+      lines.push(`actuator ${cap.key} ${cap.modes.join(" ")}`);
     }
   }
   return { deviceName: ir.device.name, sensors, actuators, descriptor: lines.join("\n") + "\n" };
@@ -89,6 +95,9 @@ export interface TwinHandlers {
 
 export interface TwinHandle {
   stop: () => void;
+  // Drives an actuator on the running twin, so the debugger can change a mode and watch the
+  // affected sensor respond. Keyed by the actuator key and its mode index.
+  command: (key: string, mode: number) => void;
 }
 
 // Builds the command-line arguments for the twin binary from options, emitting only the
@@ -103,12 +112,6 @@ export function twinArgs(options: TwinOptions): string[] {
   }
   if (options.intervalMs !== undefined) {
     args.push("--interval-ms", String(options.intervalMs));
-  }
-  if (options.initial !== undefined) {
-    args.push("--initial", String(options.initial));
-  }
-  if (options.step !== undefined) {
-    args.push("--step", String(options.step));
   }
   if (options.fault !== undefined && options.fault !== "none") {
     args.push("--fault", options.fault);
@@ -128,7 +131,7 @@ export function twinArgs(options: TwinOptions): string[] {
 // Spawns the twin and streams its telemetry to the handlers. Returns a handle whose stop()
 // terminates the twin early, for when the developer closes or restarts the debugger.
 export function spawnTwin(options: TwinOptions, handlers: TwinHandlers): TwinHandle {
-  const child = spawn(options.binPath, twinArgs(options), { stdio: ["ignore", "pipe", "pipe"] });
+  const child = spawn(options.binPath, twinArgs(options), { stdio: ["pipe", "pipe", "pipe"] });
 
   child.on("error", (error) => {
     handlers.onError?.(error);
@@ -148,6 +151,11 @@ export function spawnTwin(options: TwinOptions, handlers: TwinHandlers): TwinHan
   return {
     stop: () => {
       child.kill();
+    },
+    command: (key, mode) => {
+      // The twin reads actuator commands on stdin in the same line format as the SDK's serial
+      // console, so driving an actuator here is the same path a real board takes.
+      child.stdin?.write(`command key=${key} mode=${mode}\n`);
     },
   };
 }

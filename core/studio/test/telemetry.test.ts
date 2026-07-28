@@ -92,13 +92,13 @@ test("twinPlan derives the descriptor and capability lists from a manifest", () 
     { key: "temperature_sensor", unit: "celsius" },
     { key: "humidity", unit: "percent" },
   ]);
-  assert.deepEqual(plan.actuators, ["fan"]);
+  assert.deepEqual(plan.actuators, [{ key: "fan", modes: ["low", "high"] }]);
   assert.equal(
     plan.descriptor,
     "device environment_sensor\n" +
       "sensor temperature_sensor celsius -20 50\n" +
       "sensor humidity percent\n" +
-      "actuator fan 2\n",
+      "actuator fan low high\n",
   );
 });
 
