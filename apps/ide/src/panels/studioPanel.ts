@@ -158,19 +158,21 @@ export class StudioPanel {
     return { yaml: formToManifest(panel.currentForm), source, uri: panel.activeUri };
   }
 
-  // Opens the panel and launches the creation wizard. On a fresh panel the wizard is deferred
-  // until the webview signals it is ready; on an existing panel it opens immediately.
+  // Opens the panel and launches the creation wizard. On an existing panel it reveals and opens
+  // the wizard directly, without re-initializing: re-running sendInit would post an init for the
+  // current (saved) device that hides the wizard we just opened, since a device is present. On a
+  // fresh panel the wizard is deferred until the webview signals it is ready, after its first init.
   static newDevice(context: vscode.ExtensionContext): void {
-    const existed = StudioPanel.current !== undefined;
-    StudioPanel.show(context, "designer");
-    const panel = StudioPanel.current;
-    if (panel === undefined) {
+    if (StudioPanel.current !== undefined) {
+      const panel = StudioPanel.current;
+      panel.panel.reveal(vscode.ViewColumn.Beside);
+      panel.post({ type: "focus", tab: "designer" });
+      panel.post({ type: "openWizard" });
       return;
     }
-    if (existed) {
-      panel.post({ type: "openWizard" });
-    } else {
-      panel.pendingWizard = true;
+    StudioPanel.show(context, "designer");
+    if (StudioPanel.current !== undefined) {
+      StudioPanel.current.pendingWizard = true;
     }
   }
 
