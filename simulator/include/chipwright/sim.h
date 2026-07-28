@@ -22,6 +22,23 @@ typedef struct {
 void cw_sim_source_init(cw_sim_source_t *source, float initial, float step);
 cw_sensor_driver_t cw_sim_source_driver(cw_sim_source_t *source);
 
+// A bounded simulated signal for the live twin. Unlike cw_sim_source (a deterministic ramp the
+// acceptance tests rely on), this stays within [min, max]: it wanders with a little noise and
+// eases toward a target the twin can move, so an actuator can drive the quantity up or down
+// (e.g. heating raises a temperature) without the reading ever leaving its declared range.
+typedef struct {
+  float min;
+  float max;
+  float value;
+  float target;
+  unsigned rng;
+} cw_sim_signal_t;
+
+void cw_sim_signal_init(cw_sim_signal_t *signal, float min, float max);
+// Moves the resting point the signal eases toward; clamped into [min, max].
+void cw_sim_signal_set_target(cw_sim_signal_t *signal, float target);
+cw_sensor_driver_t cw_sim_signal_driver(cw_sim_signal_t *signal);
+
 // A simulated actuator that records the last mode applied and logs each change. It lets a
 // manifest's actuators be registered on the twin, with no hardware behind them, so a device
 // with actuators runs on the twin exactly as one with only sensors.

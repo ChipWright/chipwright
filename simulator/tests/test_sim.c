@@ -203,9 +203,34 @@ static void test_sim_actuator(void) {
   CHECK(actuator.mode == 0);
 }
 
+static void test_sim_signal_bounded(void) {
+  cw_sim_signal_t signal;
+  cw_sim_signal_init(&signal, 0.0f, 100.0f);
+  const cw_sensor_driver_t driver = cw_sim_signal_driver(&signal);
+  float value = -1.0f;
+  // Never leaves the declared range, even over a long run.
+  for (int i = 0; i < 500; i++) {
+    CHECK(driver.read(driver.ctx, &value) == CW_OK);
+    CHECK(value >= 0.0f && value <= 100.0f);
+  }
+  // Eases up toward a high target (an actuator driving the quantity up)...
+  cw_sim_signal_set_target(&signal, 95.0f);
+  for (int i = 0; i < 300; i++) {
+    driver.read(driver.ctx, &value);
+  }
+  CHECK(value > 80.0f);
+  // ...and back down when the target drops.
+  cw_sim_signal_set_target(&signal, 5.0f);
+  for (int i = 0; i < 300; i++) {
+    driver.read(driver.ctx, &value);
+  }
+  CHECK(value < 20.0f);
+}
+
 int main(void) {
   test_source_advances();
   test_sim_actuator();
+  test_sim_signal_bounded();
   test_fault_none_passthrough();
   test_fault_offset();
   test_fault_stuck_freezes();
