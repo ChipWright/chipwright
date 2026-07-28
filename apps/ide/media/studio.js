@@ -9,7 +9,7 @@
   const vscode = acquireVsCodeApi();
   const $ = (s, r) => (r || document).querySelector(s);
 
-  const state = { form: null, protocols: [], templates: [], source: "", hasDevice: false, twinSensors: [] };
+  const state = { form: null, protocols: [], templates: [], source: "", hasDevice: false, twinSensors: [], saved: false, dirty: false, lastValid: false };
 
   const ICON = {
     trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16M9 7V5h6v2m-8 0 1 13h8l1-13"/></svg>',
@@ -18,6 +18,7 @@
     save: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 3h11l3 3v15H5zM8 3v5h7"/></svg>',
     download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>',
     chip: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M10 2v3m4-3v3m-4 14v3m4-3v3M2 10h3m-3 4h3m14-4h3m-3 4h3"/></svg>',
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 13 4 4L19 7"/></svg>',
   };
   const TICON = {
     thermostat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14 14V5a2 2 0 0 0-4 0v9a4 4 0 1 0 4 0z"/></svg>',
@@ -47,6 +48,9 @@
   const inspector = $("#inspector");
   let applyTimer = null;
   function scheduleApply() {
+    // An edit means the manifest on disk is now behind the designer; reflect that at once so the
+    // primary action returns to Save, then recompile after a short debounce.
+    if (!state.dirty) { state.dirty = true; renderActions(); }
     if (applyTimer !== null) clearTimeout(applyTimer);
     applyTimer = setTimeout(() => vscode.postMessage({ type: "applyForm", form: state.form }), 200);
   }
@@ -183,26 +187,51 @@
       ? '<div class="empty-note">Fix the errors above to generate artifacts.</div>'
       : '<div class="filelist">' + files.map((f) => '<div class="filerow">' + ICON.file + '<code>' + esc(f) + '</code></div>').join("") + '</div>';
 
-    const disabled = valid ? "" : " disabled";
+    state.lastValid = valid;
     $("#output").innerHTML =
       '<div class="out-status"><span class="pill ' + (valid ? "ok" : "bad") + '"><span class="dot"></span>' + (valid ? "Valid" : "Invalid") + '</span>'
       + '<span class="counts">' + state.form.capabilities.length + ' capabilities &middot; ' + state.form.protocols.length + ' protocols</span>'
-      + '<div class="actions push-right">'
-      + '<button class="btn ghost small" id="scaffold-btn" title="Scaffold a starter firmware module wired to this device"' + disabled + '>' + ICON.chip + 'Scaffold firmware</button>'
-      + '<button class="btn ghost small" id="generate-btn" title="Write all generated artifacts to disk"' + disabled + '>' + ICON.download + 'Generate</button>'
-      + '<button class="btn primary small" id="save-btn">' + ICON.save + 'Save</button>'
-      + '</div></div>'
-      + '<div class="out-section"><h4>Source</h4><div class="empty-note">' + esc(state.source) + '</div></div>'
+      + '<div class="actions push-right" id="out-actions"></div></div>'
+      + '<div class="out-section"><h4>Source</h4><div class="empty-note">' + esc(state.source || "Not saved yet") + '</div></div>'
       + '<div class="out-section"><h4>Conformance</h4>' + conformanceHtml(data.conformance) + '</div>'
       + '<div class="out-section"><h4>Diagnostics ' + (diags.length ? "(" + diags.length + ")" : "") + '</h4>' + diagHtml + '</div>'
       + '<div class="out-section"><h4>Generated artifacts ' + (files.length ? "(" + files.length + ")" : "") + '</h4>' + fileHtml + '</div>'
       + '<div class="out-section"><h4>device.yaml</h4><pre class="code"><code>' + highlightYaml(data.yaml || "") + '</code></pre></div>';
 
-    $("#save-btn").addEventListener("click", () => vscode.postMessage({ type: "saveForm", form: state.form }));
-    if (valid) {
-      $("#generate-btn").addEventListener("click", () => { vscode.postMessage({ type: "generate", form: state.form }); toast("Generating artifacts..."); });
-      $("#scaffold-btn").addEventListener("click", () => { vscode.postMessage({ type: "scaffold", form: state.form }); toast("Scaffolding firmware..."); });
+    renderActions();
+  }
+
+  // The output panel's single guided action. Rather than three equal buttons, it presents the one
+  // next step for where the device is: fix errors, then save the definition, then (once saved and
+  // clean) generate its artifacts, with scaffolding offered as the quiet secondary step. A live
+  // chip shows whether the manifest on disk is current.
+  function renderActions() {
+    const el = $("#out-actions");
+    if (el === null) return;
+    let chip;
+    if (!state.saved) chip = '<span class="save-state new">Not saved</span>';
+    else if (state.dirty) chip = '<span class="save-state dirty"><span class="dot"></span>Unsaved changes</span>';
+    else chip = '<span class="save-state clean">' + ICON.check + 'Saved</span>';
+
+    let buttons;
+    if (!state.lastValid) {
+      buttons = '<button class="btn primary small" disabled>Fix errors to continue</button>';
+    } else if (!state.saved || state.dirty) {
+      // Unsaved: the one clear next step is to save the definition.
+      buttons = '<button class="btn primary small" data-act="save">' + ICON.save + 'Save device</button>';
+    } else {
+      // Saved and current: generating artifacts is the promoted step; scaffolding is the quiet one.
+      buttons = '<button class="btn primary small" data-act="generate" title="Write the firmware interface, cloud API, tests, and docs to generated/">' + ICON.download + 'Generate</button>'
+        + '<button class="btn ghost small" data-act="scaffold" title="Create an editable starter firmware module wired to the interface (once)">' + ICON.chip + 'Scaffold firmware</button>';
     }
+    el.innerHTML = chip + buttons;
+    el.querySelectorAll("[data-act]").forEach((b) => b.addEventListener("click", () => doAction(b.dataset.act)));
+  }
+
+  function doAction(act) {
+    if (act === "save") vscode.postMessage({ type: "saveForm", form: state.form });
+    else if (act === "generate") { vscode.postMessage({ type: "generate", form: state.form }); toast("Generating artifacts..."); }
+    else if (act === "scaffold") { vscode.postMessage({ type: "scaffold", form: state.form }); toast("Scaffolding firmware..."); }
   }
 
   // ---- Creation screen ---------------------------------------------------
@@ -373,15 +402,18 @@
     switch (m.type) {
       case "init":
         state.form = m.form; state.protocols = m.protocols; state.templates = m.templates || []; state.source = m.source || ""; state.hasDevice = !!m.hasDevice;
+        state.saved = !!m.saved; state.dirty = false;
         state.twinSensors = m.twinSensors || []; populateFaultTargets();
         renderInspector(); renderOutput(m);
         if (state.hasDevice) hideWizard(); else showWizard();
         break;
       case "update":
+        state.saved = !!m.saved;
         state.twinSensors = m.twinSensors || []; populateFaultTargets();
         renderOutput(m); break;
       case "saved":
-        state.source = m.source; toast("Saved to " + m.source); vscode.postMessage({ type: "refresh" }); break;
+        state.source = m.source; state.saved = true; state.dirty = false;
+        toast("Saved to " + m.source); vscode.postMessage({ type: "refresh" }); break;
       case "saveError":
         toast(m.message); break;
       case "actionError":

@@ -206,6 +206,7 @@ export class StudioPanel {
       type: "init",
       source,
       hasDevice,
+      saved: this.activeUri !== undefined,
       form,
       protocols: DESIGNER_PROTOCOLS,
       templates: DEVICE_TEMPLATES,
@@ -217,7 +218,7 @@ export class StudioPanel {
   // typing in the designer stays responsive. The manifest is not written to disk here.
   private applyForm(form: DeviceForm): void {
     this.currentForm = form;
-    this.post({ type: "update", ...this.compile(formToManifest(form)) });
+    this.post({ type: "update", saved: this.activeUri !== undefined, ...this.compile(formToManifest(form)) });
   }
 
   // Loads a newly created device into the editor as an unsaved manifest. The next save prompts
@@ -226,7 +227,7 @@ export class StudioPanel {
     this.activeUri = undefined;
     this.overrideManifest = undefined;
     this.currentForm = form;
-    this.post({ type: "update", ...this.compile(formToManifest(form)) });
+    this.post({ type: "update", saved: false, ...this.compile(formToManifest(form)) });
   }
 
   private async saveForm(form: DeviceForm): Promise<void> {
