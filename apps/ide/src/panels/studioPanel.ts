@@ -163,16 +163,17 @@ export class StudioPanel {
   // current (saved) device that hides the wizard we just opened, since a device is present. On a
   // fresh panel the wizard is deferred until the webview signals it is ready, after its first init.
   static newDevice(context: vscode.ExtensionContext): void {
-    if (StudioPanel.current !== undefined) {
-      const panel = StudioPanel.current;
-      panel.panel.reveal(vscode.ViewColumn.Beside);
-      panel.post({ type: "focus", tab: "designer" });
-      panel.post({ type: "openWizard" });
+    const existing = StudioPanel.current;
+    if (existing !== undefined) {
+      existing.panel.reveal(vscode.ViewColumn.Beside);
+      existing.post({ type: "focus", tab: "designer" });
+      existing.post({ type: "openWizard" });
       return;
     }
     StudioPanel.show(context, "designer");
-    if (StudioPanel.current !== undefined) {
-      StudioPanel.current.pendingWizard = true;
+    const created = StudioPanel.current;
+    if (created !== undefined) {
+      created.pendingWizard = true;
     }
   }
 
