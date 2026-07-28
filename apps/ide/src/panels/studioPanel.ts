@@ -29,6 +29,7 @@ type Tab = "designer" | "twin";
 type InboundMessage =
   | { type: "ready" | "refresh" | "stopTwin" | "openAssistant" }
   | { type: "startTwin"; fault: TwinFault; faultAt: number; offset: number; faultTarget: string }
+  | { type: "twinCommand"; key: string; mode: number }
   | { type: "applyForm"; form: DeviceForm }
   | { type: "createDevice"; form: DeviceForm }
   | { type: "saveForm"; form: DeviceForm }
@@ -90,6 +91,9 @@ export class StudioPanel {
             break;
           case "stopTwin":
             this.stopTwin();
+            break;
+          case "twinCommand":
+            this.twin?.command(message.key, message.mode);
             break;
           case "openAssistant":
             void vscode.commands.executeCommand("chipwright.openAssistant");
@@ -360,6 +364,7 @@ export class StudioPanel {
       diagnostics: unknown;
     };
     twinSensors: { key: string; unit: string }[];
+    twinActuators: { key: string; modes: string[] }[];
     yaml: string;
   } {
     const validation = validate(yaml);
@@ -378,6 +383,7 @@ export class StudioPanel {
         diagnostics: conform.report.diagnostics,
       },
       twinSensors: plan?.sensors ?? [],
+      twinActuators: plan?.actuators ?? [],
       yaml,
     };
   }
@@ -418,7 +424,7 @@ export class StudioPanel {
     writeFileSync(descriptorPath, plan.descriptor, "utf8");
     this.post({ type: "twinStarted" });
     this.twin = spawnTwin(
-      { binPath, ticks: 60, intervalMs: 250, fault, faultAt, offset, descriptorPath, faultTarget },
+      { binPath, ticks: 0, intervalMs: 250, fault, faultAt, offset, descriptorPath, faultTarget },
       {
         onSample: (sample) => {
           this.post({ type: "sample", metric: sample.metric, value: sample.value, unit: sample.unit });
@@ -559,6 +565,7 @@ export class StudioPanel {
         <span class="spring"></span>
         <span class="pill idle" id="twin-status"><span class="dot"></span><span id="twin-status-text">idle</span></span>
       </div>
+      <div class="drive is-hidden" id="twin-drive"><span class="drive-label">Drive</span><div class="drive-rows" id="twin-actuators"></div></div>
     </div>
     <div class="card">
       <div class="readout"><span class="val" id="twin-val">--</span><span class="unit" id="twin-unit">celsius</span><span class="meta"><span id="twin-count">0</span> samples</span></div>

@@ -9,7 +9,7 @@
   const vscode = acquireVsCodeApi();
   const $ = (s, r) => (r || document).querySelector(s);
 
-  const state = { form: null, protocols: [], templates: [], source: "", hasDevice: false, twinSensors: [], saved: false, dirty: false, lastValid: false };
+  const state = { form: null, protocols: [], templates: [], source: "", hasDevice: false, twinSensors: [], twinActuators: [], saved: false, dirty: false, lastValid: false };
 
   const ICON = {
     trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16M9 7V5h6v2m-8 0 1 13h8l1-13"/></svg>',
@@ -303,6 +303,25 @@
     twin.fault = b.dataset.fault;
     updateFaultControls();
   });
+
+  // Actuator controls: one mode selector per actuator. Buttons only act while the twin is
+  // running (each Start is a fresh process), and drive the running twin so the affected sensor
+  // responds live. This is how a thermostat's temperature reacts to heating vs cooling.
+  const twinDrive = $("#twin-drive"), twinActuatorsEl = $("#twin-actuators");
+  function renderActuatorControls() {
+    twinDrive.classList.toggle("is-hidden", state.twinActuators.length === 0);
+    twinActuatorsEl.innerHTML = state.twinActuators.map((a) =>
+      '<div class="drive-row"><span class="k">' + esc(a.key) + '</span>'
+      + '<div class="seg mini" data-actkey="' + esc(a.key) + '">'
+      + a.modes.map((m, i) => '<button data-actmode="' + i + '"' + (twin.running ? "" : " disabled") + '>' + esc(m) + '</button>').join("")
+      + '</div></div>').join("");
+  }
+  twinActuatorsEl.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-actmode]"); if (!b || !twin.running) return;
+    const seg = b.closest("[data-actkey]");
+    seg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-selected", String(x === b)));
+    vscode.postMessage({ type: "twinCommand", key: seg.dataset.actkey, mode: +b.dataset.actmode });
+  });
   document.querySelectorAll("[data-step]").forEach((b) => b.addEventListener("click", () => {
     const input = b.dataset.step === "at" ? faultAt : faultOff;
     input.value = Math.max(0, (parseInt(input.value, 10) || 0) + Number(b.dataset.d));
@@ -315,6 +334,9 @@
     twin.running = running;
     $("#twin-run-label").textContent = running ? "Stop" : "Start";
     $("#twin-run").querySelector("svg").innerHTML = running ? '<rect x="6" y="6" width="12" height="12" rx="1.5"/>' : '<path d="M8 5v14l11-7z"/>';
+    // Actuator controls only act on a running twin; rebuild them so they enable/disable and their
+    // selection clears at the start of each run.
+    renderActuatorControls();
   }
 
   function startTwin() {
@@ -403,13 +425,15 @@
       case "init":
         state.form = m.form; state.protocols = m.protocols; state.templates = m.templates || []; state.source = m.source || ""; state.hasDevice = !!m.hasDevice;
         state.saved = !!m.saved; state.dirty = false;
-        state.twinSensors = m.twinSensors || []; populateFaultTargets();
+        state.twinSensors = m.twinSensors || []; state.twinActuators = m.twinActuators || [];
+        populateFaultTargets(); renderActuatorControls();
         renderInspector(); renderOutput(m);
         if (state.hasDevice) hideWizard(); else showWizard();
         break;
       case "update":
         state.saved = !!m.saved;
-        state.twinSensors = m.twinSensors || []; populateFaultTargets();
+        state.twinSensors = m.twinSensors || []; state.twinActuators = m.twinActuators || [];
+        populateFaultTargets(); renderActuatorControls();
         renderOutput(m); break;
       case "saved":
         state.source = m.source; state.saved = true; state.dirty = false;
